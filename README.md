@@ -18,18 +18,35 @@ Enterprise-grade smart-city traffic intelligence platform designed for municipal
 
 [![Live Demo](https://img.shields.io/badge/🚀%20Live%20Demo-TrafficAI-116466?style=for-the-badge)](https://trafficai-taupe.vercel.app/)
 
-
 ## 📱 Android App
 
-### Download TrafficAI Android App
+### 🚀 Download TrafficAI for Android
 
-Get the latest Android APK:
+Experience AI-powered real-time traffic intelligence directly on your Android phone.
 
-[![Download Android App](https://img.shields.io/badge/Download-Android%20APK-116466?style=for-the-badge&logo=android)](https://github.com/AR955593/app-debug.apk)
+[![Download Android APK](https://img.shields.io/badge/📱%20Download%20TrafficAI%20APK-116466?style=for-the-badge&logo=android)](https://raw.githubusercontent.com/AR955593/Traffic-AI/main/app-debug.apk)
 
-**Latest Version:** v2.0.2.1
+**Latest Version:** `v2.0.2.1`
+
+**APK:** `Traffic_AI.apk`
 
 > Download the APK, install it on your Android phone, and start using TrafficAI.
+
+### 📲 Installation
+
+1. Click **Download TrafficAI APK**.
+2. Download `Traffic_AI.apk` on your Android phone.
+3. Open the downloaded APK.
+4. Allow installation from unknown sources if Android asks.
+5. Install TrafficAI.
+6. Launch the app and start using real-time traffic intelligence.
+
+### 🌐 Also Try the Web Version
+
+[![Open Live Website](https://img.shields.io/badge/🌐%20Open%20TrafficAI%20Live-203531?style=for-the-badge)](https://trafficai-taupe.vercel.app/)
+
+**Live Website:**  
+https://trafficai-taupe.vercel.app/
 
 ## 📸 Platform Interface
 
