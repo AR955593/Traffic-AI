@@ -1,0 +1,15 @@
+android-app/
+scratch/
+tests/
+.git/
+.venv/
+*.apk
+*.png
+*.jpg
+*.jpeg
+*.gif
+*.zip
+*.tar.gz
+*.mp4
+*.pdf
+models/*.pt

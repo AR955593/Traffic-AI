@@ -8,10 +8,21 @@ from sklearn.model_selection import train_test_split
 from sklearn.ensemble import RandomForestRegressor, HistGradientBoostingRegressor, RandomForestClassifier
 from sklearn.metrics import mean_squared_error, mean_absolute_error, r2_score, f1_score, accuracy_score
 
-import torch
-import torch.nn as nn
-import torch.optim as optim
-from torch.utils.data import DataLoader, TensorDataset
+try:
+    import torch
+    import torch.nn as nn
+    import torch.optim as optim
+    from torch.utils.data import DataLoader, TensorDataset
+    HAS_TORCH = True
+except ImportError:
+    HAS_TORCH = False
+    torch = None
+    class _DummyModule:
+        def __init__(self, *args, **kwargs):
+            pass
+    class _DummyNN:
+        Module = _DummyModule
+    nn = _DummyNN()
 
 from preprocessing import DataPreprocessor
 from feature_engineering import FeatureEngineer
@@ -20,12 +31,15 @@ from feature_engineering import FeatureEngineer
 class TrafficLSTM(nn.Module):
     def __init__(self, input_dim=8, hidden_dim=64, num_layers=2, output_dim=1):
         super(TrafficLSTM, self).__init__()
-        self.lstm = nn.LSTM(input_dim, hidden_dim, num_layers, batch_first=True, dropout=0.1)
-        self.fc1 = nn.Linear(hidden_dim, 32)
-        self.relu = nn.ReLU()
-        self.fc2 = nn.Linear(32, output_dim)
+        if HAS_TORCH:
+            self.lstm = nn.LSTM(input_dim, hidden_dim, num_layers, batch_first=True, dropout=0.1)
+            self.fc1 = nn.Linear(hidden_dim, 32)
+            self.relu = nn.ReLU()
+            self.fc2 = nn.Linear(32, output_dim)
 
     def forward(self, x):
+        if not HAS_TORCH:
+            return None
         out, _ = self.lstm(x)
         out = self.fc1(out[:, -1, :])
         out = self.relu(out)

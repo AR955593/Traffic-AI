@@ -9,7 +9,10 @@ from typing import Optional, Dict, Any, List
 import numpy as np
 import pandas as pd
 import joblib
-import torch
+try:
+    import torch
+except ImportError:
+    torch = None
 
 from preprocessing import DataPreprocessor
 from feature_engineering import FeatureEngineer
