@@ -24,7 +24,7 @@ Enterprise-grade smart-city traffic intelligence platform designed for municipal
 
 Experience AI-powered real-time traffic intelligence directly on your Android phone.
 
-[![Download Android APK](https://img.shields.io/badge/📱%20Download%20TrafficAI%20APK-116466?style=for-the-badge&logo=android)](https://raw.githubusercontent.com/AR955593/Traffic-AI/main/app-debug.apk)
+[![Download Android APK](https://img.shields.io/badge/📱%20Download%20TrafficAI%20APK-116466?style=for-the-badge&logo=android)](https://raw.githubusercontent.com/AR955593/Traffic-AI/main/TrafficAI.apk)
 
 **Latest Version:** `v2.0.2.1`
 
