@@ -10,6 +10,15 @@ Enterprise-grade smart-city traffic intelligence platform designed for municipal
 
 ---
 
+## 🌐 Live Demo
+
+### 🚀 Try AI Traffic Intel Online
+
+👉 **Live Website:** https://trafficai-taupe.vercel.app/
+
+[![Live Demo](https://img.shields.io/badge/🚀%20Live%20Demo-TrafficAI-116466?style=for-the-badge)](https://trafficai-taupe.vercel.app/)
+
+
 ## 📸 Platform Interface
 
 ### Desktop Control Room
@@ -134,12 +143,64 @@ Returns:
 | **Random Forest Regressor** | **0.924** | **94.5%** | **0.041** | **65 ms** |
 
 ---
+## ✨ Key Features
 
-## 🧪 Automated Testing
+- 🚦 Real-time traffic intelligence
+- 🗺️ Road-level congestion visualization
+- 🧠 AI-based traffic forecasting
+- 🛣️ Smart route optimization
+- ⚡ Fastest route
+- 📏 Shortest-distance route
+- 🚗 Traffic-aware route comparison
+- 📍 Current GPS location
+- 🚨 Live traffic incidents
+- 🌦️ Weather context
+- 📊 Traffic analytics
+- 📱 Android/mobile support
+- 🌐 Global location support
 
-Run the full platform test suite:
-```bash
-python tests/test_traffic_platform.py
-```
+---
 
-All 7 test suites pass with 100% coverage across Network Graphs, Simulation Ticks, Routing Algorithms, ML Inference, Incident Management, Provider Abstraction, and RBAC Security.
+## 🏗️ Technology Stack
+
+- React.js
+- Python
+- FastAPI
+- Flutter
+- Machine Learning
+- XGBoost
+- Leaflet
+- WebSocket
+- TomTom Traffic APIs
+- OpenWeather API
+
+---
+
+## 🔗 Project Links
+
+| Resource | Link |
+|---|---|
+| 🌐 Live Website | https://trafficai-taupe.vercel.app/ |
+| 💻 GitHub | https://github.com/AR955593/traffic-ai |
+| 👨‍💻 Developer | ARRAJPUT (Ankit Rajput) |
+
+---
+
+## 👨‍💻 About Developer
+
+**Developed by ARRAJPUT (Ankit Rajput)**  
+Full Stack Developer & AI Enthusiast
+
+AI Traffic Intel is built and maintained by ARRAJPUT, specializing in scalable web, mobile and AI-integrated applications.
+
+**Tech Stack:** Flutter, React.js, Python, Node.js & Machine Learning
+
+**GitHub:** https://github.com/AR955593
+
+**LinkedIn:** https://linkedin.com/in/ar955593
+
+**Contact:** ankitrajankitraj817@gmail.com
+
+---
+
+© 2026 AI Traffic Intel. All Rights Reserved.
