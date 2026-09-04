@@ -19,6 +19,18 @@ Enterprise-grade smart-city traffic intelligence platform designed for municipal
 [![Live Demo](https://img.shields.io/badge/🚀%20Live%20Demo-TrafficAI-116466?style=for-the-badge)](https://trafficai-taupe.vercel.app/)
 
 
+## 📱 Android App
+
+### Download TrafficAI Android App
+
+Get the latest Android APK:
+
+[![Download Android App](https://img.shields.io/badge/Download-Android%20APK-116466?style=for-the-badge&logo=android)](https://github.com/AR955593/app-debug.apk)
+
+**Latest Version:** v2.0.2.1
+
+> Download the APK, install it on your Android phone, and start using TrafficAI.
+
 ## 📸 Platform Interface
 
 ### Desktop Control Room
