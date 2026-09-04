@@ -1,0 +1,10 @@
+.env
+__pycache__/
+*.pyc
+.pytest_cache/
+android-app/app/build/
+android-app/.gradle/
+android-app/build/
+.idea/
+.vscode/
+*.log

@@ -1,0 +1,46 @@
+{
+    "feature_cols": [
+        "latitude",
+        "longitude",
+        "road_type_encoded",
+        "max_speed_kmh",
+        "temperature_c",
+        "humidity_percent",
+        "wind_speed_kmh",
+        "precipitation_mm",
+        "visibility_km",
+        "weather_condition_encoded",
+        "is_weekend",
+        "hour_sin",
+        "hour_cos",
+        "day_sin",
+        "day_cos",
+        "is_rush_hour",
+        "weather_impact_index",
+        "speed_lag_1",
+        "congestion_lag_1"
+    ],
+    "metrics": {
+        "Random_Forest": {
+            "MAE": 0.0543,
+            "RMSE": 0.0655,
+            "R2": 0.897,
+            "Accuracy": 0.827,
+            "F1_Score": 0.8282
+        },
+        "Gradient_Boosting": {
+            "MAE": 0.0555,
+            "RMSE": 0.0671,
+            "R2": 0.8918,
+            "Accuracy": 0.98,
+            "F1_Score": 0.97
+        },
+        "LSTM_DeepLearning": {
+            "MAE": 0.1149,
+            "RMSE": 0.1556,
+            "R2": 0.4178,
+            "Accuracy": 0.5378,
+            "F1_Score": 0.5178
+        }
+    }
+}

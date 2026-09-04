@@ -1,0 +1,993 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport"
+        content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>Traffic AI - Smart Route Platform</title>
+    <meta name="description"
+        content="AI-powered smart city traffic intelligence, real-time simulation, predictive congestion forecasting, and route optimization.">
+
+    <!-- Google Fonts: Inter & Outfit -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link
+        href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Outfit:wght@500;600;700;800&display=swap"
+        rel="stylesheet">
+
+    <!-- Leaflet CSS -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin="" />
+
+    <!-- FontAwesome 6 Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+
+    <!-- Custom Application Styles -->
+    <link rel="stylesheet" href="styles.css?v=2.2">
+</head>
+
+<body class="theme-light">
+    <!-- BACKDROP OVERLAYS FOR MOBILE & MODALS -->
+    <div class="sidebar-overlay" id="sidebar-overlay"></div>
+    <div class="route-planner-overlay" id="route-planner-overlay"></div>
+    <div id="toast-container" class="toast-container"></div>
+
+    <div class="app-layout">
+        <!-- ============================================= -->
+        <!-- LEFT SIDEBAR (DESKTOP)                        -->
+        <!-- ============================================= -->
+        <aside class="sidebar-desktop" id="sidebar-desktop">
+            <div class="sidebar-brand">
+                <div class="brand-badge-icon">TA</div>
+                <div class="brand-titles">
+                    <h2>Traffic AI</h2>
+                    <span>Smart Route Platform</span>
+                </div>
+                <button class="btn-close-sidebar-mobile" id="btn-close-sidebar-mobile"
+                    aria-label="Close Sidebar">&times;</button>
+            </div>
+
+            <nav class="sidebar-nav">
+                <button class="nav-item active" data-view="live-operations">
+                    <i class="fa-solid fa-bolt-lightning"></i>
+                    <span>Live Operations</span>
+                </button>
+                <button class="nav-item" data-view="route-planner">
+                    <i class="fa-solid fa-route"></i>
+                    <span>Route Planner</span>
+                </button>
+                <button class="nav-item" data-view="forecast">
+                    <i class="fa-solid fa-chart-line"></i>
+                    <span>Forecast</span>
+                </button>
+                <button class="nav-item" data-view="analytics">
+                    <i class="fa-solid fa-chart-simple"></i>
+                    <span>Analytics</span>
+                </button>
+                <button class="nav-item" data-view="incidents">
+                    <i class="fa-solid fa-triangle-exclamation"></i>
+                    <span>Incidents</span>
+                    <span class="badge-count" id="sidebar-incident-badge" style="display:none;">0</span>
+                </button>
+                <button class="nav-item admin-nav-item" data-view="data-sources" style="display:none;">
+                    <i class="fa-solid fa-database"></i>
+                    <span>Data Sources</span>
+                </button>
+                <button class="nav-item admin-nav-item" data-view="model-monitoring" style="display:none;">
+                    <i class="fa-solid fa-microchip"></i>
+                    <span>Model Monitoring</span>
+                </button>
+                <div class="nav-divider admin-nav-item" style="display:none;"></div>
+                <button class="nav-item admin-nav-item" data-view="administration" style="display:none;">
+                    <i class="fa-solid fa-building-shield"></i>
+                    <span>Administration</span>
+                </button>
+            </nav>
+
+            <div class="sidebar-bottom-actions">
+                <button class="nav-item btn-about-dev" id="btn-about-dev-sidebar">
+                    <i class="fa-solid fa-user-astronaut"></i>
+                    <span>About Developer</span>
+                </button>
+            </div>
+
+            <div class="sidebar-footer">
+                <span> © 2026 Traffic AI. All Rights Reserved (V2.0.2.1) </span>
+            </div>
+        </aside>
+
+        <!-- ============================================= -->
+        <!-- MAIN CONTENT AREA                             -->
+        <!-- ============================================= -->
+        <div class="main-wrapper">
+            <!-- TOP HEADER -->
+            <header class="top-header">
+                <div class="header-left">
+                    <button class="btn-mobile-menu" id="btn-mobile-menu" aria-label="Toggle Menu">
+                        <i class="fa-solid fa-bars"></i>
+                    </button>
+
+                    <div class="city-selector-badge" id="city-selector-btn" title="Current Location">
+                        <i class="fa-solid fa-location-dot"></i>
+                        <span id="current-city-label">Detecting location...</span>
+                    </div>
+
+                    <div class="pill-badge pill-live" id="traffic-source-badge">
+                        <span class="pill-dot"></span>
+                        <span id="traffic-source-text">LIVE</span>
+                    </div>
+
+                    <div class="connection-status">
+                        <span class="status-dot green"></span>
+                        <span id="ws-status-text">Connected</span>
+                    </div>
+
+                    <span class="last-update-text" id="last-update-text">Updated just now</span>
+                </div>
+
+                <div class="header-right">
+                    <div class="weather-widget" id="header-weather-widget">
+                        <i class="fa-solid fa-cloud-sun"></i>
+                        <span id="weather-text">--°C · Loading</span>
+                    </div>
+
+                    <button class="icon-btn" id="btn-refresh" title="Refresh Live State">
+                        <i class="fa-solid fa-rotate" id="icon-refresh-spinner"></i>
+                    </button>
+
+                    <button class="icon-btn notif-btn" id="btn-notifications" title="Active Alerts">
+                        <i class="fa-solid fa-bell"></i>
+                        <span class="notif-badge" id="notif-unread-count" style="display:none;">0</span>
+                    </button>
+
+                    <button class="icon-btn" id="btn-theme-toggle" title="Toggle Light / Dark Mode">
+                        <i class="fa-solid fa-moon"></i>
+                    </button>
+
+                    <div class="user-profile-btn" id="user-profile-btn" title="User Profile">
+                        <div class="user-avatar" id="header-user-avatar">RA</div>
+                        <div class="user-info-text">
+                            <span class="user-name" id="header-user-name">R. Awasthi</span>
+                            <span class="user-role" id="header-user-role">Traffic Operator</span>
+                        </div>
+                    </div>
+                </div>
+            </header>
+
+            <!-- 6-CARD KPI BAR -->
+            <section class="kpi-bar" id="kpi-bar">
+                <div class="kpi-card">
+                    <span class="kpi-label">Active Vehicles</span>
+                    <div class="kpi-value-row">
+                        <h3 id="kpi-vehicles-val">N/A</h3>
+                    </div>
+                    <span class="kpi-subtext" id="kpi-vehicles-trend"
+                        style="font-size:10px;color:var(--text-muted);">Not available from TomTom API</span>
+                </div>
+                <div class="kpi-divider"></div>
+
+                <div class="kpi-card">
+                    <span class="kpi-label">Observed Route Speed</span>
+                    <div class="kpi-value-row">
+                        <h3 id="kpi-speed-val">N/A</h3>
+                    </div>
+                    <span class="kpi-trend trend-mod" id="kpi-speed-trend">Real-Time Speed</span>
+                </div>
+                <div class="kpi-divider"></div>
+
+                <div class="kpi-card">
+                    <span class="kpi-label">Route Congestion</span>
+                    <div class="kpi-value-row">
+                        <h3 id="kpi-congestion-val">N/A</h3>
+                    </div>
+                    <span class="kpi-trend trend-mod" id="kpi-congestion-trend">Live Traffic State</span>
+                </div>
+                <div class="kpi-divider"></div>
+
+                <div class="kpi-card">
+                    <span class="kpi-label">Congested Segments</span>
+                    <div class="kpi-value-row">
+                        <h3 id="kpi-congested-roads-val">N/A</h3>
+                    </div>
+                    <span class="kpi-subtext" id="kpi-congested-roads-trend">Heavy / Severe Corridors</span>
+                </div>
+                <div class="kpi-divider"></div>
+
+                <div class="kpi-card">
+                    <span class="kpi-label">Active Incidents</span>
+                    <div class="kpi-value-row">
+                        <h3 id="kpi-incidents-val">0</h3>
+                    </div>
+                    <span class="kpi-subtext" id="kpi-incidents-sub">In visible area</span>
+                </div>
+                <div class="kpi-divider"></div>
+
+                <div class="kpi-card">
+                    <span class="kpi-label">Weather Impact</span>
+                    <div class="kpi-value-row">
+                        <h3 id="kpi-weather-val">Low</h3>
+                    </div>
+                    <span class="kpi-subtext" id="kpi-weather-sub">OpenWeather API</span>
+                </div>
+            </section>
+
+            <!-- WORKSPACE CONTAINER -->
+            <main class="workspace-container">
+                <!-- ========================================= -->
+                <!-- VIEW 1: LIVE OPERATIONS (PRIMARY)          -->
+                <!-- ========================================= -->
+                <div class="view-panel active" id="view-live-operations">
+                    <div class="operations-layout">
+                        <!-- Map Area -->
+                        <div class="map-wrapper" id="map-wrapper">
+                            <!-- Floating Top Controls Bar -->
+                            <div class="map-floating-top" id="map-floating-top">
+                                <!-- Quick Route Planner Toggle Button -->
+                                <button class="btn btn-primary btn-plan-trigger" id="btn-toggle-quick-route">
+                                    <i class="fa-solid fa-route"></i> Plan Smart Route
+                                </button>
+
+                                <div class="search-box">
+                                    <i class="fa-solid fa-magnifying-glass"></i>
+                                    <input type="text" id="input-map-search"
+                                        placeholder="Search road, landmark, city...">
+                                    <div class="autocomplete-dropdown" id="search-autocomplete-box"></div>
+                                </div>
+
+                                <div class="scenario-selector">
+                                    <select id="select-scenario" class="custom-select-pill">
+                                        <option value="Normal Day" selected>LIVE: Current Observed Traffic</option>
+                                        <option value="Morning Peak">FORECAST: Morning Peak (ML)</option>
+                                        <option value="Evening Peak">FORECAST: Evening Peak (ML)</option>
+                                        <option value="Heavy Rain">FORECAST: Heavy Rain Scenario</option>
+                                        <option value="Major Accident">FORECAST: Major Accident</option>
+                                        <option value="Road Closure">FORECAST: Road Closure</option>
+                                    </select>
+                                </div>
+
+                                <div class="sim-step-badge" id="sim-step-badge" style="display:none;">
+                                    LIVE FLOW
+                                </div>
+                            </div>
+
+                            <!-- Map Pick Mode Floating Instruction Bar -->
+                            <div class="map-pick-banner" id="map-pick-banner" style="display:none;">
+                                <div class="map-pick-header">
+                                    <i class="fa-solid fa-location-dot text-peach"></i>
+                                    <strong id="map-pick-target-label">Select A on Map</strong>
+                                </div>
+                                <div class="map-pick-address-box" id="map-pick-address-preview">Move map or tap a road
+                                    to pick location...</div>
+                                <div class="map-pick-actions">
+                                    <button class="btn btn-sm btn-primary" id="btn-confirm-map-pick">
+                                        <i class="fa-solid fa-check"></i> Confirm this location
+                                    </button>
+                                    <button class="btn btn-sm btn-secondary" id="btn-cancel-map-pick">
+                                        <i class="fa-solid fa-xmark"></i> Cancel
+                                    </button>
+                                </div>
+                            </div>
+
+                            <!-- Map Pick Center Crosshair Target Overlay -->
+                            <div class="map-pick-crosshair" id="map-pick-crosshair" style="display:none;">
+                                <div class="crosshair-ring">
+                                    <i class="fa-solid fa-crosshairs"></i>
+                                </div>
+                            </div>
+
+                            <!-- Dedicated Map Controls: Square Fullscreen Button (Top-Right) -->
+                            <button class="map-square-btn btn-map-fullscreen" id="btn-map-fullscreen"
+                                title="Toggle Fullscreen Map" aria-label="Toggle Fullscreen Map">
+                                <i class="fa-solid fa-expand" id="icon-map-fullscreen"></i>
+                            </button>
+
+                            <!-- Dedicated Map Controls: GPS Recenter Button (Bottom-Left) -->
+                            <button class="map-square-btn btn-map-recenter" id="btn-map-recenter"
+                                title="Recenter on My GPS Location" aria-label="Recenter on GPS">
+                                <i class="fa-solid fa-location-crosshairs"></i>
+                            </button>
+
+                            <!-- Fullscreen Exit Floating Bar -->
+                            <div class="map-fullscreen-exit-bar" id="map-fullscreen-exit-bar" style="display:none;">
+                                <span class="fs-title"><i class="fa-solid fa-satellite-dish text-mint"></i> TrafficAI
+                                    Live Map</span>
+                                <button class="btn btn-sm btn-primary fs-exit-btn" id="btn-exit-map-fullscreen">
+                                    <i class="fa-solid fa-compress"></i> Exit Fullscreen
+                                </button>
+                            </div>
+
+                            <!-- Floating Quick Route Planner Card on Map -->
+                            <div class="floating-route-card" id="floating-route-card">
+                                <div class="route-card-header">
+                                    <h4><i class="fa-solid fa-location-crosshairs text-teal"></i> Traffic-Aware Route
+                                        Planner</h4>
+                                    <button class="btn-icon-close" id="btn-close-floating-route"
+                                        aria-label="Close Route Planner">&times;</button>
+                                </div>
+                                <div class="route-card-inputs">
+                                    <div class="route-input-group">
+                                        <div class="input-with-actions">
+                                            <span class="route-point-marker origin-dot">A</span>
+                                            <input type="text" id="route-from-input" class="route-text-input"
+                                                placeholder="Origin / Use GPS / Search location..." value="">
+                                            <button class="btn-geo-action" id="btn-use-geolocation"
+                                                title="Use My Current GPS Location">
+                                                <i class="fa-solid fa-crosshairs"></i> GPS
+                                            </button>
+                                            <button class="btn-geo-action" id="btn-pick-origin-map"
+                                                title="Click on Map to Pick Origin">
+                                                <i class="fa-solid fa-map-pin"></i> Map
+                                            </button>
+                                        </div>
+                                    </div>
+
+                                    <div class="route-swap-row">
+                                        <button class="btn-swap-locations" id="btn-swap-locations"
+                                            title="Swap Origin and Destination">
+                                            <i class="fa-solid fa-arrow-down-up-across-line"></i> Swap
+                                        </button>
+                                    </div>
+
+                                    <div class="route-input-group">
+                                        <div class="input-with-actions">
+                                            <span class="route-point-marker dest-dot">B</span>
+                                            <input type="text" id="route-to-input" class="route-text-input"
+                                                placeholder="Search destination globally..." value="">
+                                            <button class="btn-geo-action" id="btn-pick-dest-map"
+                                                title="Click on Map to Pick Destination">
+                                                <i class="fa-solid fa-map-pin"></i> Map
+                                            </button>
+                                        </div>
+                                        <div class="autocomplete-dropdown" id="dest-autocomplete-box"></div>
+                                    </div>
+
+                                    <!-- Preferences Bar -->
+                                    <div class="preference-pills-row">
+                                        <button class="pref-pill active" data-pref="balanced">Balanced</button>
+                                        <button class="pref-pill" data-pref="fastest">Fastest</button>
+                                        <button class="pref-pill" data-pref="shortest">Shortest</button>
+                                        <button class="pref-pill" data-pref="lowest_traffic">Lowest Traffic</button>
+                                    </div>
+
+                                    <!-- Inline Validation Error Banner -->
+                                    <div class="route-form-error-msg" id="route-form-error-msg" style="display:none;">
+                                    </div>
+
+                                    <button class="btn btn-primary btn-block" id="btn-calc-route-main">
+                                        <i class="fa-solid fa-wand-magic-sparkles"></i> Calculate Smart Route
+                                    </button>
+                                </div>
+                            </div>
+
+                            <!-- Live Route Re-Evaluation Alert Banner (Appears when traffic spikes ahead) -->
+                            <div class="live-reroute-alert" id="live-reroute-alert">
+                                <div class="alert-content">
+                                    <i class="fa-solid fa-triangle-exclamation alert-icon"></i>
+                                    <div>
+                                        <strong>Traffic spike detected ahead (+5 min delay)</strong>
+                                        <p id="reroute-alert-desc">An alternative route via arterial corridors is now
+                                            faster.</p>
+                                    </div>
+                                </div>
+                                <button class="btn btn-sm btn-primary" id="btn-accept-reroute">
+                                    Switch to Faster Route
+                                </button>
+                            </div>
+
+                            <!-- Interactive Leaflet Map Container -->
+                            <div id="traffic-map" class="traffic-map"></div>
+
+                            <!-- Floating Bottom Map Legend (Bottom-Right) -->
+                            <div class="map-floating-legend" id="map-floating-legend">
+                                <div class="legend-row"><span class="legend-line line-low"></span> Low (&gt;70 km/h)
+                                </div>
+                                <div class="legend-row"><span class="legend-line line-mod"></span> Mod (40-70 km/h)
+                                </div>
+                                <div class="legend-row"><span class="legend-line line-heavy"></span> Heavy (20-40 km/h)
+                                </div>
+                                <div class="legend-row"><span class="legend-line line-severe"></span> Severe (&lt;20
+                                    km/h)</div>
+                            </div>
+
+                            <div class="map-attribution-badge">
+                                © OpenStreetMap contributors · TomTom Traffic
+                            </div>
+                        </div>
+
+                        <!-- Right Detail Panel (Desktop) / Bottom Sheet (Mobile) -->
+                        <aside class="detail-drawer" id="detail-drawer">
+                            <div class="drawer-handle" id="drawer-handle"></div>
+
+                            <div class="drawer-tabs">
+                                <button class="drawer-tab active" data-tab="tab-road-detail">Road Detail</button>
+                                <button class="drawer-tab" data-tab="tab-route-summary">Route Compare</button>
+                                <button class="drawer-tab" data-tab="tab-incidents-list">Incidents</button>
+                            </div>
+
+                            <!-- Tab 1: Road Detail -->
+                            <div class="drawer-tab-content active" id="tab-road-detail">
+                                <div class="road-title-header">
+                                    <h2 id="detail-road-name">Select a Road Segment</h2>
+                                    <span class="road-meta" id="detail-road-meta">Click any road segment on the map for
+                                        real-time details</span>
+                                </div>
+
+                                <div class="status-pill-row">
+                                    <span class="badge-status badge-low" id="detail-status-pill">
+                                        ● SELECT SEGMENT
+                                    </span>
+                                </div>
+
+                                <!-- 2x2 Stats Grid -->
+                                <div class="stats-2x2-grid">
+                                    <div class="stat-box">
+                                        <span class="stat-label">Current speed</span>
+                                        <h4 id="detail-current-speed">-- <small>km/h</small></h4>
+                                    </div>
+                                    <div class="stat-box">
+                                        <span class="stat-label">Free-flow speed</span>
+                                        <h4 id="detail-freeflow-speed">-- <small>km/h</small></h4>
+                                    </div>
+                                    <div class="stat-box">
+                                        <span class="stat-label">Vehicle count</span>
+                                        <h4 id="detail-vehicle-count">N/A</h4>
+                                    </div>
+                                    <div class="stat-box">
+                                        <span class="stat-label">Est. delay</span>
+                                        <h4 id="detail-est-delay">--</h4>
+                                    </div>
+                                </div>
+
+                                <!-- Predictions Section -->
+                                <div class="prediction-section">
+                                    <span class="section-title">Prediction</span>
+
+                                    <div class="prediction-row">
+                                        <span class="pred-time">+15m</span>
+                                        <span class="pred-badge badge-mod" id="pred-15m-badge">--</span>
+                                        <span class="pred-speed" id="pred-15m-speed">--</span>
+                                        <div class="pred-bar-bg">
+                                            <div class="pred-bar-fill bar-mod" style="width: 0%;"></div>
+                                        </div>
+                                    </div>
+
+                                    <div class="prediction-row">
+                                        <span class="pred-time">+30m</span>
+                                        <span class="pred-badge badge-mod" id="pred-30m-badge">--</span>
+                                        <span class="pred-speed" id="pred-30m-speed">--</span>
+                                        <div class="pred-bar-bg">
+                                            <div class="pred-bar-fill bar-mod" style="width: 0%;"></div>
+                                        </div>
+                                    </div>
+
+                                    <div class="prediction-row">
+                                        <span class="pred-time">+60m</span>
+                                        <span class="pred-badge badge-low" id="pred-60m-badge">--</span>
+                                        <span class="pred-speed" id="pred-60m-speed">--</span>
+                                        <div class="pred-bar-bg">
+                                            <div class="pred-bar-fill bar-low" style="width: 0%;"></div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- Contributing Factors -->
+                                <div class="why-factors-section">
+                                    <span class="section-title">Contributing factors</span>
+                                    <div class="factors-list" id="factors-list">
+                                        <div class="factor-item">
+                                            <span>Select a road segment on map</span>
+                                            <span class="factor-val text-muted">--</span>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div class="drawer-footer-note" id="detail-model-footer">
+                                    Real-Time Traffic: TomTom API · Prediction Model: XGBoost
+                                </div>
+                            </div>
+
+                            <!-- Tab 2: Route Compare Summary -->
+                            <div class="drawer-tab-content" id="tab-route-summary">
+                                <div class="route-summary-header">
+                                    <span class="section-title">Calculated Route Options</span>
+                                    <span class="text-muted" style="font-size:11px;" id="route-compare-status">Traffic
+                                        Colored Segments Active</span>
+                                </div>
+                                <div class="route-comparison-feed" id="drawer-route-comparison-feed">
+                                    <!-- Injected via app.js -->
+                                </div>
+                            </div>
+
+                            <!-- Tab 3: Incidents List -->
+                            <div class="drawer-tab-content" id="tab-incidents-list">
+                                <div class="incidents-header-action">
+                                    <span>Active City Incidents</span>
+                                    <button class="btn btn-sm btn-primary" id="btn-open-report-incident">
+                                        <i class="fa-solid fa-plus"></i> Report Incident
+                                    </button>
+                                </div>
+                                <div class="incidents-feed-list" id="drawer-incidents-feed">
+                                    <!-- Injected via app.js -->
+                                </div>
+                            </div>
+                        </aside>
+                    </div>
+                </div>
+
+                <!-- ========================================= -->
+                <!-- VIEW 2: ROUTE PLANNER (FULL PAGE)          -->
+                <!-- ========================================= -->
+                <div class="view-panel" id="view-route-planner">
+                    <div class="route-planner-layout">
+                        <div class="route-controls-card">
+                            <h3><i class="fa-solid fa-route text-teal"></i> User-Facing Smart Route Planning</h3>
+                            <p class="subtitle">Real-time traffic-aware navigation with discrete traffic colors and
+                                predicted ETAs</p>
+
+                            <div class="form-row">
+                                <div class="form-group">
+                                    <label><i class="fa-solid fa-circle-dot text-teal"></i> Origin</label>
+                                    <input type="text" id="full-route-origin" class="custom-input"
+                                        placeholder="Search origin or use GPS..." value="">
+                                </div>
+                                <div class="form-group">
+                                    <label><i class="fa-solid fa-location-dot text-peach"></i> Destination</label>
+                                    <input type="text" id="full-route-dest" class="custom-input"
+                                        placeholder="Search destination globally..." value="">
+                                </div>
+                            </div>
+
+                            <div class="form-row">
+                                <div class="form-group">
+                                    <label>Optimization Goal</label>
+                                    <select id="full-route-pref" class="custom-input">
+                                        <option value="balanced" selected>Balanced (Multi-Criteria)</option>
+                                        <option value="fastest">Current Fastest</option>
+                                        <option value="shortest">Shortest Physical Distance</option>
+                                        <option value="lowest_traffic">Lowest Traffic Congestion</option>
+                                    </select>
+                                </div>
+                                <div class="form-group">
+                                    <label>Departure Time</label>
+                                    <select id="full-route-time" class="custom-input">
+                                        <option value="now" selected>Depart Now</option>
+                                        <option value="in_15m">In 15 Minutes</option>
+                                        <option value="in_30m">In 30 Minutes</option>
+                                        <option value="in_60m">In 1 Hour</option>
+                                    </select>
+                                </div>
+                            </div>
+
+                            <div class="checkbox-row">
+                                <label><input type="checkbox" id="chk-avoid-incidents" checked> Avoid Active
+                                    Incidents</label>
+                                <label><input type="checkbox" id="chk-avoid-highways"> Avoid Expressways</label>
+                            </div>
+
+                            <button class="btn btn-primary btn-block" id="btn-calculate-route-full">
+                                <i class="fa-solid fa-wand-magic-sparkles"></i> Calculate Optimized Routes
+                            </button>
+                        </div>
+
+                        <!-- Route Results List -->
+                        <div class="route-results-card" id="full-route-results-container">
+                            <!-- Injected dynamically -->
+                        </div>
+                    </div>
+                </div>
+
+                <!-- ========================================= -->
+                <!-- VIEW 3: FORECAST                           -->
+                <!-- ========================================= -->
+                <div class="view-panel" id="view-forecast">
+                    <div class="analytics-layout">
+                        <div class="panel-header-row">
+                            <div>
+                                <h2><i class="fa-solid fa-chart-line text-teal"></i> Predictive Traffic Forecast</h2>
+                                <span class="subtitle">Multi-horizon congestion forecasts across metropolitan
+                                    corridors</span>
+                            </div>
+                        </div>
+
+                        <div class="charts-grid-2col">
+                            <div class="chart-card">
+                                <h3>24-Hour Diurnal Congestion Curve</h3>
+                                <div class="chart-box"><canvas id="chart-forecast-24h"></canvas></div>
+                            </div>
+                            <div class="chart-card">
+                                <h3>Weather Impact on Traffic Speeds</h3>
+                                <div class="chart-box"><canvas id="chart-weather-impact"></canvas></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- ========================================= -->
+                <!-- VIEW 4: ANALYTICS                          -->
+                <!-- ========================================= -->
+                <div class="view-panel" id="view-analytics">
+                    <div class="analytics-layout">
+                        <div class="panel-header-row">
+                            <div>
+                                <h2><i class="fa-solid fa-chart-simple text-teal"></i> Historical Operations & Analytics
+                                </h2>
+                                <span class="subtitle">Long-term traffic metrics, fleet trends, and bottlenecks</span>
+                            </div>
+                            <div class="actions-group">
+                                <select id="select-analytics-timeframe" class="custom-select-pill">
+                                    <option value="24h" selected>Last 24 Hours</option>
+                                    <option value="7d">Last 7 Days</option>
+                                    <option value="30d">Last 30 Days</option>
+                                </select>
+                                <button class="btn btn-outline" id="btn-export-csv">
+                                    <i class="fa-solid fa-download"></i> Export CSV
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- Top Congested Roads Table -->
+                        <div class="card-table-wrapper">
+                            <h3>Top Congested Corridors</h3>
+                            <table class="custom-table" id="table-congested-roads">
+                                <thead>
+                                    <tr>
+                                        <th>Rank</th>
+                                        <th>Corridor Name</th>
+                                        <th>Road Type</th>
+                                        <th>Avg Congestion</th>
+                                        <th>Avg Speed</th>
+                                        <th>Est. Delay</th>
+                                        <th>Incidents</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <!-- Injected via app.js -->
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- ========================================= -->
+                <!-- VIEW 5: INCIDENTS                          -->
+                <!-- ========================================= -->
+                <div class="view-panel" id="view-incidents">
+                    <div class="analytics-layout">
+                        <div class="panel-header-row">
+                            <div>
+                                <h2><i class="fa-solid fa-triangle-exclamation text-peach"></i> Incidents & Road Hazard
+                                    Dispatch</h2>
+                                <span class="subtitle">Live incident lifecycle: Reported → Verified → Active →
+                                    Resolved</span>
+                            </div>
+                            <button class="btn btn-primary" id="btn-create-incident-view">
+                                <i class="fa-solid fa-plus"></i> New Incident Report
+                            </button>
+                        </div>
+
+                        <div class="incidents-full-grid" id="incidents-full-grid">
+                            <!-- Injected dynamically -->
+                        </div>
+                    </div>
+                </div>
+
+                <!-- ========================================= -->
+                <!-- VIEW 6: DATA SOURCES                       -->
+                <!-- ========================================= -->
+                <div class="view-panel" id="view-data-sources">
+                    <div class="analytics-layout">
+                        <div class="panel-header-row">
+                            <div>
+                                <h2><i class="fa-solid fa-database text-teal"></i> Provider Integrations & Health</h2>
+                                <span class="subtitle">Adapter interfaces for OpenStreetMap, OpenWeather, and
+                                    TomTom</span>
+                            </div>
+                        </div>
+
+                        <div class="providers-grid" id="providers-grid">
+                            <!-- Injected dynamically -->
+                        </div>
+                    </div>
+                </div>
+
+                <!-- ========================================= -->
+                <!-- VIEW 7: MODEL MONITORING                   -->
+                <!-- ========================================= -->
+                <div class="view-panel" id="view-model-monitoring">
+                    <div class="analytics-layout">
+                        <div class="panel-header-row">
+                            <div>
+                                <h2><i class="fa-solid fa-microchip text-teal"></i> Machine Learning Model Monitoring
+                                </h2>
+                                <span class="subtitle">Real-time performance benchmarks, R² scores, and latency</span>
+                            </div>
+                        </div>
+
+                        <div class="charts-grid-2col">
+                            <div class="chart-card">
+                                <h3>Model Accuracy (R² Score)</h3>
+                                <div class="chart-box"><canvas id="chart-model-accuracy"></canvas></div>
+                            </div>
+                            <div class="chart-card">
+                                <h3>Feature Importance Weights</h3>
+                                <div class="feature-weights-list">
+                                    <div class="weight-row"><span>Time of Day / Rush Hour</span><strong>32%</strong>
+                                    </div>
+                                    <div class="weight-row"><span>Vehicle Density Ratio</span><strong>26%</strong></div>
+                                    <div class="weight-row"><span>Incident Proximity</span><strong>18%</strong></div>
+                                    <div class="weight-row"><span>Weather Impact
+                                            (Precipitation)</span><strong>14%</strong></div>
+                                    <div class="weight-row"><span>Road Classification & Lanes</span><strong>10%</strong>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- ========================================= -->
+                <!-- VIEW 8: ADMINISTRATION                     -->
+                <!-- ========================================= -->
+                <div class="view-panel" id="view-administration">
+                    <div class="analytics-layout">
+                        <div class="panel-header-row">
+                            <div>
+                                <h2><i class="fa-solid fa-building-shield text-teal"></i> Administration & Security
+                                    (RBAC)</h2>
+                                <span class="subtitle">User role switching, congestion threshold configuration, and
+                                    audit logs</span>
+                            </div>
+                        </div>
+
+                        <div class="admin-sections-grid">
+                            <div class="admin-card">
+                                <h3>Switch Active User Role</h3>
+                                <p class="subtitle">Test platform capabilities under different role permissions</p>
+                                <div class="user-role-list" id="admin-user-roles-list">
+                                    <!-- Injected dynamically -->
+                                </div>
+                            </div>
+
+                            <div class="admin-card">
+                                <h3>System Audit Log</h3>
+                                <div class="audit-log-box" id="admin-audit-log-box">
+                                    <!-- Injected dynamically -->
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </main>
+        </div>
+
+        <!-- ============================================= -->
+        <!-- MOBILE BOTTOM NAVIGATION (PHONES & TABLETS)   -->
+        <!-- ============================================= -->
+        <nav class="mobile-bottom-nav" id="mobile-bottom-nav">
+            <button class="mobile-nav-btn active" data-view="live-operations">
+                <i class="fa-solid fa-bolt-lightning"></i>
+                <span>Live</span>
+            </button>
+            <button class="mobile-nav-btn" data-view="route-planner">
+                <i class="fa-solid fa-route"></i>
+                <span>Routes</span>
+            </button>
+            <button class="mobile-nav-btn" data-view="forecast">
+                <i class="fa-solid fa-chart-line"></i>
+                <span>Forecast</span>
+            </button>
+            <button class="mobile-nav-btn" data-view="incidents">
+                <i class="fa-solid fa-triangle-exclamation"></i>
+                <span>Incidents</span>
+            </button>
+            <button class="mobile-nav-btn" data-view="analytics">
+                <i class="fa-solid fa-chart-simple"></i>
+                <span>Analytics</span>
+            </button>
+        </nav>
+    </div>
+
+    <!-- ============================================= -->
+    <!-- REPORT INCIDENT MODAL                         -->
+    <!-- ============================================= -->
+    <div class="modal-backdrop" id="modal-report-incident">
+        <div class="modal-card">
+            <div class="modal-header">
+                <h3><i class="fa-solid fa-triangle-exclamation text-peach"></i> Report New Traffic Incident</h3>
+                <button class="btn-close-modal" id="btn-close-incident-modal" aria-label="Close Modal">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="form-group">
+                    <label>Incident Title</label>
+                    <input type="text" id="input-inc-title" class="custom-input"
+                        placeholder="e.g. Stalled Vehicle on Arterial Road">
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Incident Type</label>
+                        <select id="select-inc-type" class="custom-input">
+                            <option value="Accident">Accident</option>
+                            <option value="Road Closure">Road Closure</option>
+                            <option value="Construction">Construction</option>
+                            <option value="Flooding">Flooding / Waterlogging</option>
+                            <option value="Vehicle Breakdown">Vehicle Breakdown</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>Severity</label>
+                        <select id="select-inc-severity" class="custom-input">
+                            <option value="Minor">Minor</option>
+                            <option value="Moderate">Moderate</option>
+                            <option value="Major">Major</option>
+                            <option value="Severe" selected>Severe</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label>Affected Road Corridor</label>
+                    <input type="text" id="input-inc-corridor" class="custom-input"
+                        placeholder="Enter road or segment name..." value="Main Arterial Corridor">
+                </div>
+                <div class="form-group">
+                    <label>Description & Dispatch Instructions</label>
+                    <textarea id="input-inc-desc" class="custom-input" rows="3"
+                        placeholder="Provide details for response units..."></textarea>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" id="btn-cancel-incident">Cancel</button>
+                <button class="btn btn-primary" id="btn-submit-incident">Dispatch Incident</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ============================================= -->
+    <!-- NOTIFICATION CENTER MODAL                     -->
+    <!-- ============================================= -->
+    <div class="modal-backdrop" id="modal-notifications">
+        <div class="modal-card" style="max-width: 520px;">
+            <div class="modal-header">
+                <h3><i class="fa-solid fa-bell text-peach"></i> Live Traffic Alerts & Dispatch Feed</h3>
+                <button class="btn-close-modal" id="btn-close-notif-modal"
+                    aria-label="Close Notifications">&times;</button>
+            </div>
+            <div class="modal-body" style="max-height: 400px; overflow-y: auto;" id="notif-feed-container">
+                <!-- Dynamically populated notifications -->
+            </div>
+            <div class="modal-footer" style="justify-content: space-between;">
+                <button class="btn btn-outline btn-sm" id="btn-clear-notifications">Clear All</button>
+                <button class="btn btn-secondary btn-sm" id="btn-close-notif-footer">Close</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ============================================= -->
+    <!-- ABOUT DEVELOPER MODAL                         -->
+    <!-- ============================================= -->
+    <div class="modal-backdrop" id="modal-about-dev">
+        <div class="modal-card dev-modal-card">
+            <div class="modal-header">
+                <h3><i class="fa-solid fa-code text-teal"></i> About Developer</h3>
+                <button class="btn-close-modal" id="btn-close-dev-modal" aria-label="Close Modal">&times;</button>
+            </div>
+            <div class="modal-body dev-modal-body">
+                <!-- Avatar & Title Section -->
+                <div class="dev-avatar-section">
+                    <div class="dev-avatar-ring">
+                        <span class="dev-avatar-initials">AR</span>
+                    </div>
+                    <h2 class="dev-name">ARRAJPUT</h2>
+                    <span class="dev-full-name">(Ankit Rajput)</span>
+                    <div class="dev-title-badge">Full Stack Developer & AI Enthusiast</div>
+                </div>
+
+                <!-- Bio / Overview -->
+                <p class="dev-bio">
+                    Traffic AI is built and maintained by ARRAJPUT, specializing in building scalable web, mobile,
+                    and AI-integrated applications.
+                </p>
+
+                <!-- Tech Stack Pills -->
+                <div class="dev-section-block">
+                    <span class="dev-section-title"><i class="fa-solid fa-layer-group text-peach"></i> Tech Stack</span>
+                    <div class="dev-tech-pills">
+                        <span class="tech-pill">React.js</span>
+                        <span class="tech-pill">Python</span>
+                        <span class="tech-pill">Node.js</span>
+                        <span class="tech-pill">Machine Learning</span>
+                    </div>
+                </div>
+
+                <!-- Links Section -->
+                <div class="dev-section-block">
+                    <span class="dev-section-title"><i class="fa-solid fa-link text-teal"></i> Connect & Links</span>
+                    <div class="dev-links-list">
+                        <a href="https://github.com/AR955593" target="_blank" rel="noopener noreferrer"
+                            class="dev-link-item">
+                            <i class="fa-brands fa-github"></i>
+                            <div class="link-text">
+                                <span class="link-label">GitHub</span>
+                                <span class="link-url">github.com/AR955593</span>
+                            </div>
+                            <i class="fa-solid fa-arrow-up-right-from-square link-arrow"></i>
+                        </a>
+
+                        <a href="https://www.linkedin.com/in/ar955593" target="_blank" rel="noopener noreferrer"
+                            class="dev-link-item">
+                            <i class="fa-brands fa-linkedin"></i>
+                            <div class="link-text">
+                                <span class="link-label">LinkedIn</span>
+                                <span class="link-url">linkedin.com/in/ar955593</span>
+                            </div>
+                            <i class="fa-solid fa-arrow-up-right-from-square link-arrow"></i>
+                        </a>
+
+                        <a href="mailto:ankitrajankitraj817@gmail.com" class="dev-link-item">
+                            <i class="fa-solid fa-envelope"></i>
+                            <div class="link-text">
+                                <span class="link-label">Contact Email</span>
+                                <span class="link-url">ankitrajankitraj817@gmail.com</span>
+                            </div>
+                            <i class="fa-solid fa-paper-plane link-arrow"></i>
+                        </a>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer dev-modal-footer">
+                <span>© 2026 Traffic AI. All Rights Reserved.</span>
+                <button class="btn btn-secondary btn-sm" id="btn-close-dev-footer">Close</button>
+            </div>
+        </div>
+    <!-- ============================================= -->
+    <!-- APP INSTALL / DOWNLOAD MODAL                  -->
+    <!-- ============================================= -->
+    <div id="modal-app-install" class="modal-backdrop" aria-hidden="true" role="dialog" aria-labelledby="app-install-title">
+        <div class="modal-card app-install-card">
+            <button id="btn-close-app-install" class="btn-modal-close" aria-label="Close modal">&times;</button>
+            
+            <div class="app-install-header">
+                <div class="app-brand-badge">
+                    <div class="brand-badge-icon">TA</div>
+                    <div class="app-brand-titles">
+                        <h3 id="app-install-title">Get the Traffic AI App</h3>
+                        <p class="app-install-subtitle">Take AI-powered real-time traffic intelligence with you.</p>
+                    </div>
+                </div>
+                <span class="install-platform-badge" id="install-platform-badge">
+                    <i class="fa-solid fa-mobile-screen"></i> <span id="install-platform-text">Android App Available</span>
+                </span>
+            </div>
+
+            <div class="app-install-body">
+                <ul class="app-features-list">
+                    <li><i class="fa-solid fa-circle-check"></i> Real-time traffic intelligence</li>
+                    <li><i class="fa-solid fa-circle-check"></i> Smart route optimization</li>
+                    <li><i class="fa-solid fa-circle-check"></i> Road-level congestion</li>
+                    <li><i class="fa-solid fa-circle-check"></i> Live incidents & traffic updates</li>
+                </ul>
+                <div class="desktop-notice" id="desktop-app-notice" style="display: none;">
+                    <i class="fa-solid fa-circle-info"></i> Download the Android app and install it on your phone.
+                </div>
+            </div>
+
+            <div class="app-install-actions">
+                <a href="Traffic_AI.apk" download="Traffic_AI.apk" id="btn-download-app" class="btn-install-primary">
+                    <i class="fa-brands fa-android"></i> <span>Download Android App</span>
+                </a>
+                <button id="btn-app-maybe-later" class="btn-install-secondary">Maybe Later</button>
+            </div>
+            <div class="app-install-footer-note">
+                <span>Android APK · Official Release (v2.0.2.1)</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- External Libraries -->
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+    <!-- Core App Script -->
+    <script src="app.js?v=2.2"></script>
+</body>
+
+</html>

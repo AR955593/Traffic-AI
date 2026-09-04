@@ -1,0 +1,15 @@
+version: '3.8'
+
+services:
+  traffisense-ai:
+    build: .
+    container_name: traffisense_ai
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./data:/app/data
+      - ./models:/app/models
+    environment:
+      - OPENWEATHER_API_KEY=${OPENWEATHER_API_KEY:-YOUR_OPENWEATHER_API_KEY}
+      - GOOGLE_MAPS_API_KEY=${GOOGLE_MAPS_API_KEY:-YOUR_GOOGLE_MAPS_API_KEY}
+    restart: unless-stopped
