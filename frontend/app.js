@@ -3,10 +3,7 @@
 // Frontend Core Application Engine (Desktop, Mobile & APK)
 // =========================================================
 
-const API_BASE = (window.location.origin.includes('8000') || window.location.origin.includes('localhost'))
-    ? window.location.origin
-    : 'http://127.0.0.1:8000';
-
+const API_BASE = window.location.origin;
 const WS_BASE = API_BASE.replace(/^http/, 'ws');
 
 // Global Application State Store

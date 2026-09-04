@@ -3,13 +3,7 @@ scratch/
 tests/
 .git/
 .venv/
-*.apk
-*.png
-*.jpg
-*.jpeg
-*.gif
-*.zip
-*.tar.gz
-*.mp4
-*.pdf
 models/*.pt
+AI_Traffic_Intel_v2.0.apk
+Traffic_AI.apk
+Traffic_AI_v2.0.apk

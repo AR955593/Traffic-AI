@@ -570,7 +570,7 @@ async def traffic_websocket(websocket: WebSocket):
 # STATIC FRONTEND MOUNTING
 # -------------------------------------------------------------
 frontend_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "frontend"))
-if os.path.exists(frontend_dir):
+if os.path.exists(frontend_dir) and not os.environ.get("VERCEL"):
     app.mount("/", StaticFiles(directory=frontend_dir, html=True), name="frontend")
 
 if __name__ == "__main__":
