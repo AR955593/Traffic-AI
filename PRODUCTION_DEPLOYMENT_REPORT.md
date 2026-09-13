@@ -18,8 +18,9 @@
 
 | Verification Item | Status | Verification Evidence / Details |
 | :--- | :---: | :--- |
-| **Backend Deployment** | **PASS** | `https://trafficai-taupe.vercel.app` responding HTTP `200 OK`. |
-| **Health Check Endpoint** | **PASS** | `GET /api/v1/health` returns status `online`, mongodb `ONLINE`, weather `ONLINE`. |
+| **Vercel Frontend & Serverless Hosting** | **PASS** | `https://trafficai-taupe.vercel.app` responding HTTP `200 OK`. |
+| **Render Web Service Deployment** | **NOT VERIFIED** | `render.yaml` blueprint committed; live `.onrender.com` deployment URL unconfirmed. |
+| **Health Check Endpoint (Vercel)** | **PASS** | `GET /api/v1/health` returns status `online`, mongodb `ONLINE`, weather `ONLINE`. |
 | **MongoDB Atlas Database** | **PASS** | `traffic_ai` database active; all 10 collections & 10 index rules verified. |
 | **Data Migration** | **PASS** | `scripts/migrate_sqlite_to_mongodb.py` executed idempotently; 24 users & records verified. |
 | **JWT Authentication** | **PASS** | HS256 JWT signed with `sub`, `email`, `role`, `name`, `exp`. Hardcoded keys rejected in prod. |
