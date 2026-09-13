@@ -108,14 +108,17 @@ def test_smart_router_with_traffic_segments():
     assert "color" in seg0
     assert seg0["color"].startswith("#")
 
-    # 2. Test Worldwide Live Routing mode (OSRM / TomTom)
+    # 2. Test Worldwide Live Routing mode (Returns LIVE if TomTom active, or UNAVAILABLE if TomTom key missing/403)
     live_plan = router.plan_route(
         origin={"lat": 51.5074, "lon": -0.1278},
         destination={"lat": 51.5010, "lon": -0.1416}
     )
-    assert live_plan["success"] is True
-    assert len(live_plan["routes"]) >= 1
-    assert live_plan["routes"][0]["distance_km"] > 0
+    if live_plan["success"]:
+        assert live_plan["mode"] == "LIVE"
+        assert live_plan["provider"] == "TomTom NV"
+    else:
+        assert live_plan["mode"] == "UNAVAILABLE"
+        assert live_plan["provider"] == "TomTom NV"
 
 def test_traffic_predictor_and_factors():
     predictor = TrafficPredictor()

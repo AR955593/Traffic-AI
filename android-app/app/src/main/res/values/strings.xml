@@ -1,3 +1,14 @@
 <resources>
     <string name="app_name">Traffic AI</string>
+    <!--
+        IMPORTANT: Replace this placeholder with your actual Google OAuth Web Client ID
+        from Google Cloud Console → APIs & Services → Credentials → OAuth 2.0 Client IDs.
+        Use the "Web application" Client ID (not the Android Client ID).
+        The backend and Android app must use the SAME Web Client ID.
+        Format: XXXXXXXXXX-xxxxxxxxxxxxxxxxxxxxxxxx.apps.googleusercontent.com
+
+        You can set this at build time using a local.properties / buildConfigField
+        or by replacing this placeholder directly in this file (do NOT commit real ID to public repos).
+    -->
+    <string name="default_web_client_id">YOUR_WEB_CLIENT_ID.apps.googleusercontent.com</string>
 </resources>

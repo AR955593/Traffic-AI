@@ -22,8 +22,11 @@
     <!-- FontAwesome 6 Icons -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
 
+    <!-- Google Identity Services (GSI) Client -->
+    <script src="https://accounts.google.com/gsi/client" async defer></script>
+
     <!-- Custom Application Styles -->
-    <link rel="stylesheet" href="styles.css?v=2.2">
+    <link rel="stylesheet" href="styles.css?v=3.2.0">
 </head>
 
 <body class="theme-light">
@@ -32,7 +35,203 @@
     <div class="route-planner-overlay" id="route-planner-overlay"></div>
     <div id="toast-container" class="toast-container"></div>
 
-    <div class="app-layout">
+    <!-- ============================================= -->
+    <!-- AUTH & FULLSCREEN WRAPPER                     -->
+    <!-- ============================================= -->
+    <div class="full-screen-wrapper" id="auth-wrapper" style="display: none;">
+        <!-- SCREEN 01: SPLASH -->
+        <div class="auth-view" id="view-splash">
+            <div class="splash-content">
+                <div class="splash-logo">
+                    <i class="fa-solid fa-satellite-dish"></i>
+                </div>
+                <h1>TrafficAI</h1>
+                <p>Smarter Roads. Safer Tomorrow.</p>
+                <div class="splash-loader"></div>
+            </div>
+        </div>
+
+        <!-- SCREEN 02: ONBOARDING -->
+        <div class="auth-view" id="view-onboarding" style="display:none;">
+            <div class="onboarding-carousel">
+                <div class="onboarding-slide active" id="ob-slide-1">
+                    <div class="ob-img-placeholder"><i class="fa-solid fa-map-location-dot"></i></div>
+                    <h2>Smarter Traffic Better Decisions</h2>
+                    <p>Real-time traffic, smart routes, weather & more.</p>
+                </div>
+                <div class="onboarding-slide" id="ob-slide-2">
+                    <div class="ob-img-placeholder"><i class="fa-solid fa-bolt-lightning"></i></div>
+                    <h2>Real-Time Traffic</h2>
+                    <p>Live congestion updates to keep you moving.</p>
+                </div>
+                <div class="onboarding-slide" id="ob-slide-3">
+                    <div class="ob-img-placeholder"><i class="fa-solid fa-route"></i></div>
+                    <h2>Smart Routing</h2>
+                    <p>AI calculates the best path based on real conditions.</p>
+                </div>
+                <div class="onboarding-slide" id="ob-slide-4">
+                    <div class="ob-img-placeholder"><i class="fa-solid fa-cloud-sun-rain"></i></div>
+                    <h2>Weather + AI Forecast</h2>
+                    <p>Know what's coming before you start your journey.</p>
+                </div>
+            </div>
+            <div class="onboarding-controls">
+                <div class="ob-dots">
+                    <span class="ob-dot active"></span>
+                    <span class="ob-dot"></span>
+                    <span class="ob-dot"></span>
+                    <span class="ob-dot"></span>
+                </div>
+                <div class="ob-buttons">
+                    <button class="btn-text" id="btn-ob-skip">Skip</button>
+                    <button class="btn-primary" id="btn-ob-next">Next</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- SCREEN 03: LOGIN -->
+        <div class="auth-view" id="view-login" style="display:none;">
+            <div class="auth-card">
+                <div class="auth-header">
+                    <h2>Welcome Back <span class="emoji">👋</span></h2>
+                    <p>Sign in to continue to your account</p>
+                </div>
+                <form id="form-login" class="auth-form">
+                    <div class="form-group">
+                        <label>Email or Phone Number</label>
+                        <input type="text" id="login-identifier" placeholder="Enter your email or phone" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Password</label>
+                        <div class="input-with-eye">
+                            <input type="password" id="login-password" placeholder="Enter your password" required>
+                            <button type="button" class="btn-eye-toggle" aria-label="Toggle password visibility"
+                                data-target="login-password"><i class="fa-solid fa-eye"></i></button>
+                        </div>
+                    </div>
+                    <div class="form-row-between">
+                        <label class="checkbox-label">
+                            <input type="checkbox" id="login-remember"> Remember me
+                        </label>
+                        <button type="button" class="btn-text btn-forgot" id="btn-show-forgot">Forgot Password?</button>
+                    </div>
+                    <button type="submit" class="btn-primary btn-block" id="btn-login-submit">Login</button>
+
+                    <div class="auth-divider"><span>OR</span></div>
+
+                    <button type="button" class="btn-google" id="btn-google-login"><i class="fa-brands fa-google"></i>
+                        Continue with Google</button>
+                    <button type="button" class="btn-apple" id="btn-apple-login"><i class="fa-brands fa-apple"></i>
+                        Continue with Apple</button>
+                </form>
+                <div class="auth-footer">
+                    Don't have an account? <button type="button" class="btn-text-link"
+                        id="btn-show-register">Register</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- SCREEN 04: REGISTER -->
+        <div class="auth-view" id="view-register" style="display:none;">
+            <div class="auth-card">
+                <div class="auth-header">
+                    <h2>Create Account</h2>
+                    <p>Join TrafficAI for a better journey</p>
+                </div>
+                <form id="form-register" class="auth-form">
+                    <div class="form-group">
+                        <label>Full Name</label>
+                        <input type="text" id="reg-name" placeholder="Enter your name" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Email Address</label>
+                        <input type="email" id="reg-identifier" placeholder="Enter your email" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Password</label>
+                        <div class="input-with-eye">
+                            <input type="password" id="reg-password"
+                                placeholder="Create a strong password (min 6 chars)" required>
+                            <button type="button" class="btn-eye-toggle" aria-label="Toggle password visibility"
+                                data-target="reg-password"><i class="fa-solid fa-eye"></i></button>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label>Confirm Password</label>
+                        <div class="input-with-eye">
+                            <input type="password" id="reg-password-confirm" placeholder="Confirm your password"
+                                required>
+                            <button type="button" class="btn-eye-toggle" aria-label="Toggle password visibility"
+                                data-target="reg-password-confirm"><i class="fa-solid fa-eye"></i></button>
+                        </div>
+                    </div>
+                    <div class="form-group checkbox-group">
+                        <label class="checkbox-label">
+                            <input type="checkbox" id="reg-terms" required> I agree to the <button type="button"
+                                class="btn-inline-link" id="btn-terms-privacy">Terms &amp; Privacy Policy</button>
+                        </label>
+                    </div>
+                    <button type="submit" class="btn-primary btn-block" id="btn-register-submit">Register</button>
+
+                    <div class="auth-divider"><span>OR</span></div>
+
+                    <button type="button" class="btn-google" id="btn-google-register"><i
+                            class="fa-brands fa-google"></i> Continue with Google</button>
+                </form>
+                <div class="auth-footer">
+                    Already have an account? <button type="button" class="btn-text-link"
+                        id="btn-show-login">Login</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- SCREEN 05: FORGOT PASSWORD -->
+        <div class="auth-view" id="view-forgot-password" style="display:none;">
+            <div class="auth-card">
+                <div class="auth-header">
+                    <h2>Reset Password</h2>
+                    <p>Enter your email or phone number to receive a reset link.</p>
+                </div>
+                <form id="form-forgot" class="auth-form">
+                    <div class="form-group">
+                        <label>Email Address</label>
+                        <input type="email" id="forgot-identifier" placeholder="Enter your email" required>
+                    </div>
+                    <button type="submit" class="btn-primary btn-block" id="btn-forgot-submit">Send Reset Link</button>
+                </form>
+                <div class="auth-footer">
+                    <button type="button" class="btn-text-link" id="btn-forgot-back">Back to Login</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- SCREEN 05B: EMAIL VERIFICATION -->
+        <div class="auth-view" id="view-verify-email" style="display:none;">
+            <div class="auth-card">
+                <div class="auth-header">
+                    <div style="font-size: 2.2rem; margin-bottom: 0.5rem;">✉️</div>
+                    <h2>Verify Your Email</h2>
+                    <p id="verify-email-instruction">Enter the verification token sent to your email.</p>
+                </div>
+                <form id="form-verify-email" class="auth-form">
+                    <div class="form-group">
+                        <label>Verification Token</label>
+                        <input type="text" id="verify-token-input" placeholder="Paste verification token" required>
+                    </div>
+                    <button type="submit" class="btn-primary btn-block" id="btn-verify-submit">Verify Account</button>
+                </form>
+                <div style="margin-top: 1rem; text-align: center;">
+                    <button type="button" class="btn-text-link" id="btn-resend-verification"
+                        style="font-size:12px;color:var(--brand-mint, #10B981);">Resend Verification Token</button>
+                </div>
+                <div class="auth-footer">
+                    <button type="button" class="btn-text-link" id="btn-verify-back">Back to Login</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="app-layout" id="app-layout" style="display: none;">
         <!-- ============================================= -->
         <!-- LEFT SIDEBAR (DESKTOP)                        -->
         <!-- ============================================= -->
@@ -48,43 +247,95 @@
             </div>
 
             <nav class="sidebar-nav">
-                <button class="nav-item active" data-view="live-operations">
+                <div class="nav-section-title">COMMUTE & MOBILITY</div>
+                <button class="nav-item active" data-view="home-dashboard">
+                    <i class="fa-solid fa-house"></i>
+                    <span>Home Dashboard</span>
+                </button>
+                <button class="nav-item" data-view="live-operations">
                     <i class="fa-solid fa-bolt-lightning"></i>
-                    <span>Live Operations</span>
+                    <span>Live Map</span>
                 </button>
                 <button class="nav-item" data-view="route-planner">
                     <i class="fa-solid fa-route"></i>
-                    <span>Route Planner</span>
+                    <span>Smart Route Planner</span>
+                </button>
+                <button class="nav-item" data-view="green-route">
+                    <i class="fa-solid fa-leaf text-mint"></i>
+                    <span>Green Route (Eco)</span>
+                </button>
+                <button class="nav-item" data-view="nearby-services">
+                    <i class="fa-solid fa-charging-station text-teal"></i>
+                    <span>Nearby Services</span>
                 </button>
                 <button class="nav-item" data-view="forecast">
                     <i class="fa-solid fa-chart-line"></i>
-                    <span>Forecast</span>
+                    <span>AI Forecast</span>
+                </button>
+                <button class="nav-item" data-view="incidents">
+                    <i class="fa-solid fa-triangle-exclamation"></i>
+                    <span>Incidents & Dispatch</span>
+                    <span class="badge-count" id="sidebar-incident-badge" style="display:none;">0</span>
+                </button>
+                <button class="nav-item" data-view="ai-assistant">
+                    <i class="fa-solid fa-robot text-teal"></i>
+                    <span>AI Assistant</span>
+                </button>
+
+                <div class="nav-section-title">MY ACCOUNT</div>
+                <button class="nav-item" data-view="saved-places">
+                    <i class="fa-solid fa-bookmark text-amber"></i>
+                    <span>Saved Places</span>
+                </button>
+                <button class="nav-item" data-view="trip-history">
+                    <i class="fa-solid fa-clock-rotate-left"></i>
+                    <span>Trip History</span>
+                </button>
+                <button class="nav-item" data-view="settings">
+                    <i class="fa-solid fa-gear"></i>
+                    <span>Settings & Alerts</span>
+                </button>
+
+                <div class="nav-section-title">SMART CITY & OPS</div>
+                <button class="nav-item operator-nav-item" data-view="operator-dashboard" style="display:none;">
+                    <i class="fa-solid fa-tower-broadcast text-peach"></i>
+                    <span>Operator Control</span>
+                </button>
+                <button class="nav-item operator-nav-item" data-view="signals" style="display:none;">
+                    <i class="fa-solid fa-traffic-light text-amber"></i>
+                    <span>Signal Intelligence</span>
+                </button>
+                <button class="nav-item operator-nav-item" data-view="emergency-corridor" style="display:none;">
+                    <i class="fa-solid fa-truck-medical text-red"></i>
+                    <span>Emergency Corridor</span>
+                </button>
+                <button class="nav-item" data-view="digital-twin">
+                    <i class="fa-solid fa-cubes text-blue"></i>
+                    <span>City Digital Twin</span>
+                </button>
+                <button class="nav-item" data-view="cctv">
+                    <i class="fa-solid fa-video text-teal"></i>
+                    <span>CCTV Vision Grid</span>
+                </button>
+                <button class="nav-item" data-view="simulator">
+                    <i class="fa-solid fa-flask text-peach"></i>
+                    <span>What-If Simulator</span>
                 </button>
                 <button class="nav-item" data-view="analytics">
                     <i class="fa-solid fa-chart-simple"></i>
                     <span>Analytics</span>
                 </button>
-                <button class="nav-item" data-view="incidents">
-                    <i class="fa-solid fa-triangle-exclamation"></i>
-                    <span>Incidents</span>
-                    <span class="badge-count" id="sidebar-incident-badge" style="display:none;">0</span>
-                </button>
-                <button class="nav-item admin-nav-item" data-view="data-sources" style="display:none;">
-                    <i class="fa-solid fa-database"></i>
-                    <span>Data Sources</span>
-                </button>
-                <button class="nav-item admin-nav-item" data-view="model-monitoring" style="display:none;">
-                    <i class="fa-solid fa-microchip"></i>
-                    <span>Model Monitoring</span>
-                </button>
-                <div class="nav-divider admin-nav-item" style="display:none;"></div>
                 <button class="nav-item admin-nav-item" data-view="administration" style="display:none;">
                     <i class="fa-solid fa-building-shield"></i>
-                    <span>Administration</span>
+                    <span>System Health & Admin</span>
                 </button>
             </nav>
 
             <div class="sidebar-bottom-actions">
+                <button class="nav-item" data-view="privacy">
+                    <i class="fa-solid fa-shield-halved"></i>
+                    <span>Privacy & Legal</span>
+                </button>
                 <button class="nav-item btn-about-dev" id="btn-about-dev-sidebar">
                     <i class="fa-solid fa-user-astronaut"></i>
                     <span>About Developer</span>
@@ -214,9 +465,176 @@
             <!-- WORKSPACE CONTAINER -->
             <main class="workspace-container">
                 <!-- ========================================= -->
+                <!-- VIEW 0: HOME DASHBOARD                     -->
+                <!-- ========================================= -->
+                <div class="view-panel active" id="view-home-dashboard">
+                    <div class="home-dashboard-layout">
+                        <!-- Welcome & Quick Status Banner -->
+                        <div class="home-welcome-card">
+                            <div class="welcome-text-block">
+                                <span class="welcome-badge"><i class="fa-solid fa-satellite-dish text-mint"></i>
+                                    Predictive Traffic Intelligence</span>
+                                <h1 id="home-welcome-title">Welcome to TrafficAI</h1>
+                                <p class="subtitle" id="home-welcome-subtitle">Real-time corridor monitoring, smart
+                                    route optimization, and AI congestion forecasting.</p>
+                            </div>
+                            <div class="home-status-pill" id="home-city-status-pill">
+                                <span class="pill-dot green"></span>
+                                <span id="home-status-text">NETWORK FLOW OPERATIONAL</span>
+                            </div>
+                        </div>
+
+                        <!-- Quick Actions Grid -->
+                        <div class="home-quick-actions-bar">
+                            <button class="quick-action-btn" data-action="live-traffic">
+                                <i class="fa-solid fa-bolt-lightning text-mint"></i>
+                                <span>Live Map</span>
+                            </button>
+                            <button class="quick-action-btn" data-action="smart-route">
+                                <i class="fa-solid fa-route text-teal"></i>
+                                <span>Smart Route</span>
+                            </button>
+                            <button class="quick-action-btn" data-action="forecast">
+                                <i class="fa-solid fa-chart-line text-blue"></i>
+                                <span>AI Forecast</span>
+                            </button>
+                            <button class="quick-action-btn" data-action="incidents">
+                                <i class="fa-solid fa-triangle-exclamation text-peach"></i>
+                                <span>Incidents</span>
+                            </button>
+                            <button class="quick-action-btn" data-action="report-issue">
+                                <i class="fa-solid fa-plus-circle text-red"></i>
+                                <span>Report Issue</span>
+                            </button>
+                            <button class="quick-action-btn" data-action="saved-routes">
+                                <i class="fa-solid fa-bookmark text-amber"></i>
+                                <span>Saved Places</span>
+                            </button>
+                        </div>
+
+                        <!-- 6-Card Dashboard Grid -->
+                        <div class="home-cards-grid">
+                            <!-- Card 1: Traffic Status -->
+                            <div class="home-card" id="home-card-traffic">
+                                <div class="card-header">
+                                    <h3><i class="fa-solid fa-gauge-high text-teal"></i> Network Traffic Flow</h3>
+                                    <span class="card-source-tag" id="home-traffic-source">TomTom Traffic</span>
+                                </div>
+                                <div class="card-body">
+                                    <div class="big-metric-row">
+                                        <div class="metric-group">
+                                            <span class="metric-label">Average Speed</span>
+                                            <h2 id="home-avg-speed">45 <small>km/h</small></h2>
+                                        </div>
+                                        <div class="metric-divider"></div>
+                                        <div class="metric-group">
+                                            <span class="metric-label">Congestion Index</span>
+                                            <h2 id="home-congestion-score">24 <small>/100</small></h2>
+                                        </div>
+                                    </div>
+                                    <div class="freshness-bar" id="home-traffic-freshness">
+                                        <i class="fa-solid fa-circle-check text-mint"></i> <span>Updated 24 sec
+                                            ago</span>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Card 2: Weather Impact -->
+                            <div class="home-card" id="home-card-weather">
+                                <div class="card-header">
+                                    <h3><i class="fa-solid fa-cloud-sun-rain text-blue"></i> Weather Impact</h3>
+                                    <span class="card-source-tag">OpenWeather API</span>
+                                </div>
+                                <div class="card-body">
+                                    <div class="big-metric-row">
+                                        <div class="metric-group">
+                                            <span class="metric-label">Temperature</span>
+                                            <h2 id="home-weather-temp">24°C</h2>
+                                        </div>
+                                        <div class="metric-divider"></div>
+                                        <div class="metric-group">
+                                            <span class="metric-label">Traffic Impact</span>
+                                            <h2 id="home-weather-impact" class="text-mint">LOW</h2>
+                                        </div>
+                                    </div>
+                                    <p class="card-subtext" id="home-weather-desc">Clear sky · Wind 10 km/h · Humidity
+                                        55%</p>
+                                </div>
+                            </div>
+
+                            <!-- Card 3: Active Incidents -->
+                            <div class="home-card" id="home-card-incidents">
+                                <div class="card-header">
+                                    <h3><i class="fa-solid fa-triangle-exclamation text-peach"></i> Active Hazards</h3>
+                                    <button class="btn-text" id="home-btn-report-incident"><i
+                                            class="fa-solid fa-plus"></i> Report</button>
+                                </div>
+                                <div class="card-body">
+                                    <div class="big-metric-row">
+                                        <div class="metric-group">
+                                            <span class="metric-label">Reported Incidents</span>
+                                            <h2 id="home-incidents-count">0</h2>
+                                        </div>
+                                    </div>
+                                    <div class="home-incidents-snippet" id="home-incidents-list">
+                                        <span class="text-muted">No major hazards reported along your main
+                                            routes.</span>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Card 4: Nearby Congestion -->
+                            <div class="home-card" id="home-card-corridors">
+                                <div class="card-header">
+                                    <h3><i class="fa-solid fa-road text-amber"></i> Nearby Heavy Corridors</h3>
+                                    <span class="card-source-tag">Corridor Monitor</span>
+                                </div>
+                                <div class="card-body">
+                                    <div class="corridors-mini-list" id="home-corridors-list">
+                                        <!-- Injected via app.js -->
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Card 5: Saved Routes & Places -->
+                            <div class="home-card" id="home-card-saved">
+                                <div class="card-header">
+                                    <h3><i class="fa-solid fa-bookmark text-mint"></i> Saved Places & Routes</h3>
+                                    <button class="btn-text" id="home-btn-add-place"><i class="fa-solid fa-plus"></i>
+                                        Add Place</button>
+                                </div>
+                                <div class="card-body">
+                                    <div class="saved-items-grid" id="home-saved-items-container">
+                                        <!-- Injected via app.js -->
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Card 6: AI Traffic Assistant -->
+                            <div class="home-card" id="home-card-assistant">
+                                <div class="card-header">
+                                    <h3><i class="fa-solid fa-robot text-teal"></i> AI Traffic Assistant</h3>
+                                    <span class="card-source-tag">Advisory AI</span>
+                                </div>
+                                <div class="card-body">
+                                    <p class="assistant-prompt-preview">Ask anything about current traffic, delays, or
+                                        optimal departure windows.</p>
+                                    <div class="assistant-quick-prompts">
+                                        <button class="assistant-pill-btn"
+                                            data-query="What is traffic like right now?">Traffic right now?</button>
+                                        <button class="assistant-pill-btn" data-query="When should I leave?">Best
+                                            departure time?</button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- ========================================= -->
                 <!-- VIEW 1: LIVE OPERATIONS (PRIMARY)          -->
                 <!-- ========================================= -->
-                <div class="view-panel active" id="view-live-operations">
+                <div class="view-panel" id="view-live-operations">
                     <div class="operations-layout">
                         <!-- Map Area -->
                         <div class="map-wrapper" id="map-wrapper">
@@ -286,6 +704,55 @@
                                 title="Recenter on My GPS Location" aria-label="Recenter on GPS">
                                 <i class="fa-solid fa-location-crosshairs"></i>
                             </button>
+
+                            <!-- Map Layers Toggle Button (Bottom-Right) -->
+                            <button class="map-square-btn btn-map-layers" id="btn-map-layers-toggle"
+                                title="Toggle Map Layers">
+                                <i class="fa-solid fa-layer-group"></i>
+                            </button>
+
+                            <!-- Map Layers Floating Panel -->
+                            <div class="map-layers-panel" id="map-layers-panel">
+                                <div class="layers-panel-header">
+                                    <h4>Map Layers</h4>
+                                    <button class="btn-icon-close" id="btn-close-layers">&times;</button>
+                                </div>
+                                <div class="layers-panel-body">
+                                    <div class="layer-section">
+                                        <h5>Base Map</h5>
+                                        <div class="layer-options-grid">
+                                            <div class="layer-option active" data-layer="standard">
+                                                <i class="fa-solid fa-map"></i> Standard
+                                            </div>
+                                            <div class="layer-option" data-layer="dark">
+                                                <i class="fa-solid fa-moon"></i> Dark
+                                            </div>
+                                            <div class="layer-option" data-layer="satellite">
+                                                <i class="fa-solid fa-satellite"></i> Satellite
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="layer-section">
+                                        <h5>Overlays</h5>
+                                        <label class="layer-switch-row">
+                                            <span>Live Traffic Flow</span>
+                                            <input type="checkbox" id="toggle-layer-traffic" checked>
+                                        </label>
+                                        <label class="layer-switch-row">
+                                            <span>Active Incidents</span>
+                                            <input type="checkbox" id="toggle-layer-incidents" checked>
+                                        </label>
+                                        <label class="layer-switch-row">
+                                            <span>Weather Radar</span>
+                                            <input type="checkbox" id="toggle-layer-weather">
+                                        </label>
+                                        <label class="layer-switch-row">
+                                            <span>Smart Routes</span>
+                                            <input type="checkbox" id="toggle-layer-routes" checked>
+                                        </label>
+                                    </div>
+                                </div>
+                            </div>
 
                             <!-- Fullscreen Exit Floating Bar -->
                             <div class="map-fullscreen-exit-bar" id="map-fullscreen-exit-bar" style="display:none;">
@@ -374,6 +841,45 @@
                                 </button>
                             </div>
 
+                            <!-- Map Layers are now handled via map-layers-panel at bottom-right -->
+
+                            <!-- Active Turn-by-Turn Navigation HUD Overlay -->
+                            <div class="navigation-hud-overlay" id="navigation-hud-overlay" style="display:none;">
+                                <div class="nav-hud-top-card">
+                                    <div class="nav-maneuver-icon-box" id="nav-maneuver-icon">
+                                        <i class="fa-solid fa-arrow-turn-up text-mint"></i>
+                                    </div>
+                                    <div class="nav-maneuver-text-box">
+                                        <span class="nav-maneuver-dist" id="nav-maneuver-dist">In 300 meters</span>
+                                        <h3 class="nav-maneuver-street" id="nav-maneuver-street">Turn Right onto Mall
+                                            Road</h3>
+                                    </div>
+                                </div>
+
+                                <div class="nav-hud-bottom-bar">
+                                    <div class="nav-stat-group">
+                                        <span class="nav-stat-label">ETA</span>
+                                        <h3 id="nav-eta-val">18 min</h3>
+                                    </div>
+                                    <div class="nav-stat-group">
+                                        <span class="nav-stat-label">Distance</span>
+                                        <h3 id="nav-dist-val">5.4 km</h3>
+                                    </div>
+                                    <div class="nav-stat-group">
+                                        <span class="nav-stat-label">Speed</span>
+                                        <h3 id="nav-speed-val">42 km/h</h3>
+                                    </div>
+                                    <div class="nav-actions-group">
+                                        <button class="nav-btn-icon" id="btn-nav-mute" title="Mute/Unmute Audio"><i
+                                                class="fa-solid fa-volume-high"></i></button>
+                                        <button class="nav-btn-icon" id="btn-nav-share" title="Share Route"><i
+                                                class="fa-solid fa-share-nodes"></i></button>
+                                        <button class="btn btn-sm btn-danger" id="btn-nav-end"><i
+                                                class="fa-solid fa-xmark"></i> End Trip</button>
+                                    </div>
+                                </div>
+                            </div>
+
                             <!-- Interactive Leaflet Map Container -->
                             <div id="traffic-map" class="traffic-map"></div>
 
@@ -381,12 +887,10 @@
                             <div class="map-floating-legend" id="map-floating-legend">
                                 <div class="legend-row"><span class="legend-line line-low"></span> Low (&gt;70 km/h)
                                 </div>
-                                <div class="legend-row"><span class="legend-line line-mod"></span> Mod (40-70 km/h)
+                                <div class="legend-row"><span class="legend-line line-mod"></span> Medium (40-70 km/h)
                                 </div>
-                                <div class="legend-row"><span class="legend-line line-heavy"></span> Heavy (20-40 km/h)
+                                <div class="legend-row"><span class="legend-line line-severe"></span> High (&le;40 km/h)
                                 </div>
-                                <div class="legend-row"><span class="legend-line line-severe"></span> Severe (&lt;20
-                                    km/h)</div>
                             </div>
 
                             <div class="map-attribution-badge">
@@ -757,6 +1261,651 @@
                         </div>
                     </div>
                 </div>
+
+                <!-- ========================================= -->
+                <!-- VIEW 9: AI TRAFFIC ASSISTANT               -->
+                <!-- ========================================= -->
+                <div class="view-panel" id="view-ai-assistant">
+                    <div class="assistant-layout-container">
+                        <div class="panel-header-row">
+                            <div>
+                                <h2><i class="fa-solid fa-robot text-teal"></i> AI Traffic Assistant</h2>
+                                <span class="subtitle">Real-time advisory intelligence for traffic conditions and route
+                                    departure timing</span>
+                            </div>
+                        </div>
+
+                        <div class="assistant-chat-card">
+                            <div class="assistant-chat-header">
+                                <span class="badge-status badge-low"><i class="fa-solid fa-circle text-mint"></i> AI
+                                    Assistant Ready</span>
+                                <span class="text-muted" style="font-size:11px;">Real-Time Data Connected</span>
+                            </div>
+                            <div class="assistant-messages-container" id="assistant-messages-feed">
+                                <div class="chat-bubble bubble-assistant">
+                                    <div class="bubble-header"><i class="fa-solid fa-robot"></i> Traffic AI Assistant
+                                    </div>
+                                    <div class="bubble-text">Hello! Ask me anything about current traffic, congestion
+                                        spots, upcoming delays, or best departure times.</div>
+                                    <div class="bubble-meta">Advisory Only · Verified against live data</div>
+                                </div>
+                            </div>
+                            <div class="assistant-input-bar">
+                                <input type="text" id="input-assistant-query"
+                                    placeholder="e.g. What is traffic like right now? When should I leave?"
+                                    class="custom-input">
+                                <button class="btn btn-primary" id="btn-send-assistant-query"><i
+                                        class="fa-solid fa-paper-plane"></i> Ask</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- ========================================= -->
+                <!-- VIEW 10: WHAT-IF TRAFFIC SIMULATOR        -->
+                <!-- ========================================= -->
+                <div class="view-panel" id="view-simulator">
+                    <div class="analytics-layout">
+                        <!-- Mandatory Simulation Banner -->
+                        <div class="simulation-alert-banner">
+                            <i class="fa-solid fa-flask text-peach"></i>
+                            <div>
+                                <strong>SIMULATION — Assumption-Based Estimate</strong>
+                                <p>This scenario model is a speculative traffic projection, not live observed traffic
+                                    flow.</p>
+                            </div>
+                        </div>
+
+                        <div class="panel-header-row">
+                            <div>
+                                <h2><i class="fa-solid fa-flask text-peach"></i> What-If Traffic Scenario Simulator</h2>
+                                <span class="subtitle">Simulate citywide impact of road closures, extreme rain, or
+                                    accidents</span>
+                            </div>
+                        </div>
+
+                        <div class="simulator-controls-card">
+                            <div class="form-group">
+                                <label>Select What-If Scenario</label>
+                                <select id="select-simulator-scenario" class="custom-input">
+                                    <option value="Normal Day">Normal Day Baseline</option>
+                                    <option value="Morning Peak">Morning Peak Hour (+20% Volume)</option>
+                                    <option value="Evening Peak">Evening Peak Surge (+50% Volume)</option>
+                                    <option value="Heavy Rain">Heavy Downpour (Reduced Speeds)</option>
+                                    <option value="Major Accident">Major Tanker Accident on Mall Road</option>
+                                    <option value="Road Closure">Complete Bypass Closure on Ganga Barrage</option>
+                                </select>
+                            </div>
+                            <button class="btn btn-primary" id="btn-run-simulation"><i class="fa-solid fa-play"></i> Run
+                                What-If Simulation</button>
+                        </div>
+
+                        <div class="simulation-results-box" id="simulation-results-container" style="display:none;">
+                            <!-- Injected dynamically -->
+                        </div>
+                    </div>
+                </div>
+
+                <!-- ========================================= -->
+                <!-- VIEW 11: OPERATOR CONTROL DASHBOARD       -->
+                <!-- ========================================= -->
+                <div class="view-panel" id="view-operator-dashboard">
+                    <div class="analytics-layout">
+                        <div class="panel-header-row">
+                            <div>
+                                <h2><i class="fa-solid fa-traffic-light text-peach"></i> Smart City Operator Control
+                                    Room</h2>
+                                <span class="subtitle">Traffic Signal Intelligence & Emergency Corridor Planning</span>
+                            </div>
+                        </div>
+
+                        <div class="admin-sections-grid">
+                            <div class="admin-card">
+                                <h3><i class="fa-solid fa-traffic-light"></i> Traffic Signal Intelligence</h3>
+                                <p class="subtitle" style="color:var(--text-muted);font-size:12px;">Simulation /
+                                    Recommendation Only — Real signal actions require explicit Operator Approval.</p>
+                                <div id="operator-signals-feed" class="signals-feed-container">
+                                    <!-- Injected via app.js -->
+                                </div>
+                            </div>
+
+                            <div class="admin-card">
+                                <h3><i class="fa-solid fa-truck-medical text-red"></i> Emergency Green Corridor</h3>
+                                <p class="subtitle">Plan priority bypass corridors for ambulances & emergency vehicles
+                                </p>
+                                <div class="form-group">
+                                    <label>Emergency Vehicle Location</label>
+                                    <input type="text" id="input-emerg-loc" class="custom-input"
+                                        value="Kanpur Central Hospital">
+                                </div>
+                                <div class="form-group">
+                                    <label>Destination Hospital / Incident</label>
+                                    <input type="text" id="input-emerg-dest" class="custom-input"
+                                        value="GSVM Medical College">
+                                </div>
+                                <button class="btn btn-danger btn-block" id="btn-plan-emergency-corridor"><i
+                                        class="fa-solid fa-siren text-white"></i> Dispatch Emergency Corridor</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- ========================================= -->
+                <!-- VIEW 12: GREEN ROUTE (ECO OPTIMIZATION)   -->
+                <!-- ========================================= -->
+                <div class="view-panel" id="view-green-route">
+                    <div class="analytics-layout">
+                        <div class="panel-header-row">
+                            <div>
+                                <h2><i class="fa-solid fa-leaf text-mint"></i> Green Route & Eco Intelligence</h2>
+                                <span class="subtitle">Fuel Economy, Carbon Footprint & Low-Impact Travel
+                                    Optimization</span>
+                            </div>
+                            <div class="pill-badge"
+                                style="background:rgba(16,185,129,0.15);color:#10b981;border:1px solid rgba(16,185,129,0.3);">
+                                <i class="fa-solid fa-certificate"></i> <span>ESTIMATE (Vehicle Emissions Model)</span>
+                            </div>
+                        </div>
+
+                        <div class="kpi-bar" style="margin-bottom:1.5rem;">
+                            <div class="kpi-card">
+                                <span class="kpi-label">Est. Fuel Savings</span>
+                                <div class="kpi-value-row">
+                                    <h3 id="eco-fuel-val">-0.45 L</h3>
+                                    <span class="kpi-trend trend-low"><i class="fa-solid fa-arrow-down"></i> 32% idle
+                                        cut</span>
+                                </div>
+                                <span class="kpi-subtext">vs congested central bottleneck</span>
+                            </div>
+                            <div class="kpi-card">
+                                <span class="kpi-label">CO2 Avoided</span>
+                                <div class="kpi-value-row">
+                                    <h3 id="eco-co2-val">-1.1 kg</h3>
+                                    <span class="kpi-trend trend-low"><i class="fa-solid fa-leaf"></i> Clean
+                                        transit</span>
+                                </div>
+                                <span class="kpi-subtext">tailpipe emissions reduction</span>
+                            </div>
+                            <div class="kpi-card">
+                                <span class="kpi-label">Eco Score</span>
+                                <div class="kpi-value-row">
+                                    <h3 id="eco-score-val">92 <small>/100</small></h3>
+                                    <span class="kpi-trend trend-low">Grade A+</span>
+                                </div>
+                                <span class="kpi-subtext">steady velocity corridor</span>
+                            </div>
+                        </div>
+
+                        <div class="admin-card" style="margin-top:1.5rem;">
+                            <h3><i class="fa-solid fa-code-compare text-teal"></i> Route Carbon Comparison</h3>
+                            <p class="subtitle" style="font-size:12px;color:var(--text-muted);margin-bottom:1rem;">
+                                Calculated environmental impact across alternative paths.</p>
+                            <div class="eco-cards-grid" id="eco-routes-list"
+                                style="display:grid;grid-template-columns:repeat(auto-fit, minmax(260px, 1fr));gap:1rem;">
+                                <div class="route-card recommended"
+                                    style="border-left:4px solid var(--accent-mint);padding:1rem;background:var(--bg-card);border-radius:8px;border:1px solid var(--border-color);">
+                                    <span class="badge-tag"
+                                        style="background:#10b981;color:#fff;font-size:11px;padding:2px 6px;border-radius:4px;">BEST
+                                        ECO ROUTE</span>
+                                    <h4 style="margin:0.5rem 0 0.25rem;">Low Impact Outer Parkway</h4>
+                                    <p style="font-size:12px;color:var(--text-muted);margin:0 0 0.5rem;">Smooth
+                                        steady-speed transit avoiding stop-and-go idle.</p>
+                                    <div style="font-size:13px;display:flex;gap:1rem;font-weight:600;">
+                                        <span><i class="fa-solid fa-clock"></i> 21 min</span>
+                                        <span><i class="fa-solid fa-road"></i> 11.2 km</span>
+                                        <span style="color:var(--accent-mint);"><i class="fa-solid fa-leaf"></i> 0.95 L
+                                            Fuel</span>
+                                    </div>
+                                    <button class="btn btn-primary btn-sm btn-block" id="btn-select-eco-route"
+                                        style="margin-top:0.75rem;"><i class="fa-solid fa-route"></i> Select Eco
+                                        Route</button>
+                                </div>
+                                <div class="route-card"
+                                    style="padding:1rem;background:var(--bg-card);border-radius:8px;border:1px solid var(--border-color);">
+                                    <span class="badge-tag"
+                                        style="background:#0ea5e9;color:#fff;font-size:11px;padding:2px 6px;border-radius:4px;">FASTEST
+                                        OPTION</span>
+                                    <h4 style="margin:0.5rem 0 0.25rem;">Central Expressway Arterial</h4>
+                                    <p style="font-size:12px;color:var(--text-muted);margin:0 0 0.5rem;">Fastest elapsed
+                                        time but higher emissions during peak.</p>
+                                    <div style="font-size:13px;display:flex;gap:1rem;font-weight:600;">
+                                        <span><i class="fa-solid fa-clock"></i> 18 min</span>
+                                        <span><i class="fa-solid fa-road"></i> 9.4 km</span>
+                                        <span><i class="fa-solid fa-gas-pump"></i> 1.40 L Fuel</span>
+                                    </div>
+                                    <button class="btn btn-outline btn-sm btn-block" id="btn-select-fast-route"
+                                        style="margin-top:0.75rem;"><i class="fa-solid fa-route"></i> Select
+                                        Route</button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- ========================================= -->
+                <!-- VIEW 13: NEARBY SERVICES                  -->
+                <!-- ========================================= -->
+                <div class="view-panel" id="view-nearby-services">
+                    <div class="analytics-layout">
+                        <div class="panel-header-row">
+                            <div>
+                                <h2><i class="fa-solid fa-charging-station text-teal"></i> Nearby Commuter Services</h2>
+                                <span class="subtitle">Verified EV Chargers, Fuel Stations, Smart Parking &
+                                    Hospitals</span>
+                            </div>
+                            <button class="btn btn-outline btn-sm" id="btn-refresh-nearby"><i
+                                    class="fa-solid fa-rotate"></i> Refresh</button>
+                        </div>
+
+                        <div class="nearby-filter-pills" id="nearby-filter-bar"
+                            style="display:flex;gap:0.5rem;overflow-x:auto;padding-bottom:0.5rem;margin-bottom:1.5rem;">
+                            <button class="filter-pill active" data-category="all">All Services</button>
+                            <button class="filter-pill" data-category="EV Charging"><i
+                                    class="fa-solid fa-charging-station"></i> EV Chargers</button>
+                            <button class="filter-pill" data-category="Fuel"><i class="fa-solid fa-gas-pump"></i> Fuel /
+                                Petrol</button>
+                            <button class="filter-pill" data-category="Parking"><i
+                                    class="fa-solid fa-square-parking"></i> Smart Parking</button>
+                            <button class="filter-pill" data-category="Hospitals"><i class="fa-solid fa-hospital"></i>
+                                Hospitals & Trauma</button>
+                            <button class="filter-pill" data-category="Police"><i class="fa-solid fa-shield"></i> Police
+                                Posts</button>
+                        </div>
+
+                        <div class="nearby-cards-grid" id="nearby-services-grid"
+                            style="display:grid;grid-template-columns:repeat(auto-fit, minmax(280px, 1fr));gap:1rem;">
+                            <!-- Injected via app.js -->
+                        </div>
+                    </div>
+                </div>
+
+                <!-- ========================================= -->
+                <!-- VIEW 14: CCTV & COMPUTER VISION           -->
+                <!-- ========================================= -->
+                <div class="view-panel" id="view-cctv">
+                    <div class="analytics-layout">
+                        <div class="panel-header-row">
+                            <div>
+                                <h2><i class="fa-solid fa-video text-teal"></i> Municipal Traffic CCTV Grid</h2>
+                                <span class="subtitle">Optical Traffic Monitoring Grid & Corridor Visual Feeds</span>
+                            </div>
+                            <button class="btn btn-outline btn-sm" id="btn-refresh-cctv"><i
+                                    class="fa-solid fa-rotate"></i> Refresh Feeds</button>
+                        </div>
+
+                        <div class="alert-banner"
+                            style="background:rgba(14,165,233,0.1);border:1px solid rgba(14,165,233,0.3);color:#38bdf8;padding:0.75rem 1rem;border-radius:8px;margin-bottom:1.5rem;display:flex;align-items:center;gap:0.75rem;">
+                            <i class="fa-solid fa-circle-info" style="font-size:18px;"></i>
+                            <div>
+                                <strong>DEMO CAMERA — Simulated Municipal CCTV Grid.</strong>
+                                <p style="margin:0;font-size:12px;opacity:0.85;">Camera streams are simulated for
+                                    operator interface verification. Vehicle count: N/A — No authorized vehicle-count
+                                    source available.</p>
+                            </div>
+                        </div>
+
+                        <div class="cctv-grid" id="cctv-camera-grid"
+                            style="display:grid;grid-template-columns:repeat(auto-fit, minmax(280px, 1fr));gap:1.5rem;">
+                            <!-- Injected via app.js from /api/v1/cctv/cameras -->
+                        </div>
+                    </div>
+                </div>
+
+                <!-- ========================================= -->
+                <!-- VIEW 15: TRAFFIC SIGNAL INTELLIGENCE      -->
+                <!-- ========================================= -->
+                <div class="view-panel" id="view-signals">
+                    <div class="analytics-layout">
+                        <div class="panel-header-row">
+                            <div>
+                                <h2><i class="fa-solid fa-traffic-light text-amber"></i> Traffic Signal Intelligence
+                                </h2>
+                                <span class="subtitle">AI Queue Length Analysis & Adaptive Green-Time
+                                    Recommendations</span>
+                            </div>
+                            <div class="pill-badge pill-sim">SIMULATION / RECOMMENDATION ONLY</div>
+                        </div>
+
+                        <div class="alert-banner"
+                            style="background:rgba(245,158,11,0.1);border:1px solid rgba(245,158,11,0.3);color:#fbbf24;padding:0.75rem 1rem;border-radius:8px;margin-bottom:1.5rem;">
+                            <i class="fa-solid fa-triangle-exclamation"></i>
+                            <span><strong>Operator Authorization Required:</strong> Signal timing recommendations
+                                require Operator credentials. Any action remains simulation/recommendation only.</span>
+                        </div>
+
+                        <div class="signals-grid" id="signals-full-feed"
+                            style="display:grid;grid-template-columns:repeat(auto-fit, minmax(300px, 1fr));gap:1rem;">
+                            <!-- Injected via app.js from /api/v1/signals/recommendations -->
+                        </div>
+                    </div>
+                </div>
+
+                <!-- ========================================= -->
+                <!-- VIEW 16: EMERGENCY CORRIDOR               -->
+                <!-- ========================================= -->
+                <div class="view-panel" id="view-emergency-corridor">
+                    <div class="analytics-layout">
+                        <div class="panel-header-row">
+                            <div>
+                                <h2><i class="fa-solid fa-truck-medical text-red"></i> Emergency Green Corridor</h2>
+                                <span class="subtitle">Preempted Priority Bypass Corridors for First Responders</span>
+                            </div>
+                            <div class="pill-badge pill-sim">RECOMMENDATION ONLY</div>
+                        </div>
+
+                        <div class="admin-sections-grid"
+                            style="grid-template-columns:repeat(auto-fit, minmax(320px, 1fr));gap:1.5rem;">
+                            <div class="admin-card">
+                                <h3><i class="fa-solid fa-siren text-red"></i> Emergency Dispatch Configuration</h3>
+                                <div class="form-group" style="margin-top:1rem;">
+                                    <label>Emergency Vehicle Type</label>
+                                    <select id="emerg-vehicle-type" class="custom-select">
+                                        <option value="Ambulance (Code Red 108/112)">🚑 Ambulance (Code Red 108/112)
+                                        </option>
+                                        <option value="Fire & Rescue Tender">🚒 Fire & Rescue Tender</option>
+                                        <option value="Police Emergency Interceptor">🚓 Police Emergency Interceptor
+                                        </option>
+                                    </select>
+                                </div>
+                                <div class="form-group">
+                                    <label>Origin (Dispatch / Current Location)</label>
+                                    <input type="text" id="emerg-origin-input" class="custom-input"
+                                        value="Kanpur Central Emergency Station">
+                                </div>
+                                <div class="form-group">
+                                    <label>Destination Hospital / Incident</label>
+                                    <input type="text" id="emerg-dest-input" class="custom-input"
+                                        value="GSVM Medical College Trauma Care">
+                                </div>
+                                <button class="btn btn-danger btn-block" id="btn-dispatch-corridor-full">
+                                    <i class="fa-solid fa-route"></i> Calculate Green Corridor
+                                </button>
+                            </div>
+
+                            <div class="admin-card" id="emerg-result-card" style="display:block;">
+                                <div class="card-header"
+                                    style="border-bottom:1px solid var(--border-color);padding-bottom:0.5rem;display:flex;justify-content:space-between;align-items:center;">
+                                    <h3><i class="fa-solid fa-check-circle text-mint"></i> Priority Corridor Preview
+                                    </h3>
+                                    <span class="status-pill green"
+                                        style="background:rgba(16,185,129,0.2);color:#10b981;padding:2px 8px;border-radius:12px;font-size:11px;font-weight:600;">STANDBY</span>
+                                </div>
+                                <div class="card-body" style="padding-top:1rem;">
+                                    <p style="font-size:13px;color:var(--text-muted);" id="emerg-corridor-summary">
+                                        Recommended bypass corridor via GT Road Express Link and VIP Connector.</p>
+                                    <div class="corridor-metrics-row" style="display:flex;gap:1.5rem;margin:1rem 0;">
+                                        <div class="metric-group">
+                                            <span class="metric-label"
+                                                style="font-size:11px;color:var(--text-muted);">Priority ETA</span>
+                                            <h3 id="emerg-eta-val" style="color:var(--accent-teal);margin:0.25rem 0 0;">
+                                                9 min</h3>
+                                        </div>
+                                        <div class="metric-group">
+                                            <span class="metric-label"
+                                                style="font-size:11px;color:var(--text-muted);">Time Saved</span>
+                                            <h3 id="emerg-saved-val"
+                                                style="color:var(--accent-mint);margin:0.25rem 0 0;">-6 min</h3>
+                                        </div>
+                                        <div class="metric-group">
+                                            <span class="metric-label"
+                                                style="font-size:11px;color:var(--text-muted);">Signals Along
+                                                Path</span>
+                                            <h3 id="emerg-signals-val" style="margin:0.25rem 0 0;">4 Intersections</h3>
+                                        </div>
+                                    </div>
+                                    <button class="btn btn-primary btn-sm btn-block" id="btn-view-emerg-map"><i
+                                            class="fa-solid fa-map-location-dot"></i> View Route on Live Map</button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- ========================================= -->
+                <!-- VIEW 17: CITY DIGITAL TWIN                -->
+                <!-- ========================================= -->
+                <div class="view-panel" id="view-digital-twin">
+                    <div class="analytics-layout">
+                        <div class="panel-header-row">
+                            <div>
+                                <h2><i class="fa-solid fa-cubes text-blue"></i> Smart City Digital Twin</h2>
+                                <span class="subtitle">Multi-Layer Urban Telemetry & Geographic Infrastructure
+                                    Twin</span>
+                            </div>
+                            <button class="btn btn-primary btn-sm" id="btn-twin-open-map"><i
+                                    class="fa-solid fa-expand"></i> Inspect in Live Map</button>
+                        </div>
+
+                        <div class="admin-sections-grid" style="grid-template-columns: 2fr 1fr; gap:1.5rem;">
+                            <div class="admin-card">
+                                <h3><i class="fa-solid fa-layer-group"></i> Active Telemetric Layers</h3>
+                                <p class="subtitle" style="font-size:12px;color:var(--text-muted);margin-bottom:1rem;">
+                                    Toggle layers to dynamically control live spatial rendering.</p>
+                                <div class="twin-layer-controls"
+                                    style="display:flex;flex-direction:column;gap:0.75rem;">
+                                    <label class="layer-toggle-row"
+                                        style="display:flex;align-items:center;gap:0.75rem;cursor:pointer;">
+                                        <input type="checkbox" id="twin-layer-roads" checked>
+                                        <span><strong>Road Network Graph</strong> (Arterials, Connectors &
+                                            Highways)</span>
+                                    </label>
+                                    <label class="layer-toggle-row"
+                                        style="display:flex;align-items:center;gap:0.75rem;cursor:pointer;">
+                                        <input type="checkbox" id="twin-layer-traffic" checked>
+                                        <span><strong>Live Traffic Heatmap</strong> (Real-time velocity coloring)</span>
+                                    </label>
+                                    <label class="layer-toggle-row"
+                                        style="display:flex;align-items:center;gap:0.75rem;cursor:pointer;">
+                                        <input type="checkbox" id="twin-layer-incidents" checked>
+                                        <span><strong>Active Incidents & Hazards</strong> (Roadblock markers)</span>
+                                    </label>
+                                    <label class="layer-toggle-row"
+                                        style="display:flex;align-items:center;gap:0.75rem;cursor:pointer;">
+                                        <input type="checkbox" id="twin-layer-signals" checked>
+                                        <span><strong>Traffic Signal Nodes</strong> (Intersection intelligence)</span>
+                                    </label>
+                                    <label class="layer-toggle-row"
+                                        style="display:flex;align-items:center;gap:0.75rem;cursor:pointer;">
+                                        <input type="checkbox" id="twin-layer-zones">
+                                        <span><strong>High Congestion Risk Zones</strong> (Predictive
+                                            bottlenecks)</span>
+                                    </label>
+                                </div>
+                            </div>
+
+                            <div class="admin-card">
+                                <h3><i class="fa-solid fa-chart-pie"></i> Network Topology Stats</h3>
+                                <div class="twin-stats-list"
+                                    style="margin-top:1rem;display:flex;flex-direction:column;gap:0.75rem;">
+                                    <div class="twin-stat-item">
+                                        <span class="text-muted" style="font-size:12px;">Monitored Road Corridors</span>
+                                        <h4 style="margin:0;">34 Active Segments</h4>
+                                    </div>
+                                    <div class="twin-stat-item">
+                                        <span class="text-muted" style="font-size:12px;">Total Network Length</span>
+                                        <h4 style="margin:0;">78.4 km</h4>
+                                    </div>
+                                    <div class="twin-stat-item">
+                                        <span class="text-muted" style="font-size:12px;">Mean Network Velocity</span>
+                                        <h4 style="margin:0;color:var(--accent-teal);">41.2 km/h</h4>
+                                    </div>
+                                    <div class="twin-stat-item">
+                                        <span class="text-muted" style="font-size:12px;">Digital Twin
+                                            Synchronicity</span>
+                                        <h4 style="margin:0;color:var(--accent-mint);"><i
+                                                class="fa-solid fa-circle-check"></i> 100% In Sync</h4>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- ========================================= -->
+                <!-- VIEW 18: SAVED PLACES                     -->
+                <!-- ========================================= -->
+                <div class="view-panel" id="view-saved-places">
+                    <div class="analytics-layout">
+                        <div class="panel-header-row">
+                            <div>
+                                <h2><i class="fa-solid fa-bookmark text-amber"></i> Saved Places</h2>
+                                <span class="subtitle">Frequent Commute Destinations & Custom Locations</span>
+                            </div>
+                            <button class="btn btn-primary btn-sm" id="btn-add-place-full"><i
+                                    class="fa-solid fa-plus"></i> Add Place</button>
+                        </div>
+
+                        <div class="places-container-grid" id="view-places-list"
+                            style="display:grid;grid-template-columns:repeat(auto-fit, minmax(280px, 1fr));gap:1rem;margin-top:1rem;">
+                            <!-- Injected via app.js -->
+                        </div>
+                    </div>
+                </div>
+
+                <!-- ========================================= -->
+                <!-- VIEW 19: TRIP HISTORY                     -->
+                <!-- ========================================= -->
+                <div class="view-panel" id="view-trip-history">
+                    <div class="analytics-layout">
+                        <div class="panel-header-row">
+                            <div>
+                                <h2><i class="fa-solid fa-clock-rotate-left text-teal"></i> Trip History & Drive Logs
+                                </h2>
+                                <span class="subtitle">Complete Drive Logs and Personal Commute Analytics</span>
+                            </div>
+                            <button class="btn btn-outline btn-sm" id="btn-clear-trips-full"><i
+                                    class="fa-solid fa-trash"></i> Clear History</button>
+                        </div>
+
+                        <div class="kpi-bar" style="margin-bottom:1.5rem;">
+                            <div class="kpi-card">
+                                <span class="kpi-label">Total Completed Trips</span>
+                                <h3 id="history-trips-count">0</h3>
+                            </div>
+                            <div class="kpi-card">
+                                <span class="kpi-label">Total Distance Driven</span>
+                                <h3 id="history-km-count">0 km</h3>
+                            </div>
+                            <div class="kpi-card">
+                                <span class="kpi-label">Estimated Delay Avoided</span>
+                                <h3 id="history-saved-time" style="color:var(--accent-mint);">0 min</h3>
+                            </div>
+                        </div>
+
+                        <div class="history-list-full" id="view-trips-list"
+                            style="display:flex;flex-direction:column;gap:0.75rem;">
+                            <!-- Injected via app.js -->
+                        </div>
+                    </div>
+                </div>
+
+                <!-- ========================================= -->
+                <!-- VIEW 20: SETTINGS & PREFERENCES           -->
+                <!-- ========================================= -->
+                <div class="view-panel" id="view-settings">
+                    <div class="analytics-layout">
+                        <div class="panel-header-row">
+                            <div>
+                                <h2><i class="fa-solid fa-gear text-teal"></i> Application Settings</h2>
+                                <span class="subtitle">Alert Thresholds, Display Preferences & Data Privacy</span>
+                            </div>
+                            <button class="btn btn-primary btn-sm" id="btn-save-settings"><i
+                                    class="fa-solid fa-floppy-disk"></i> Save Preferences</button>
+                        </div>
+
+                        <div class="admin-sections-grid"
+                            style="grid-template-columns:repeat(auto-fit, minmax(300px, 1fr)); gap:1.5rem;">
+                            <div class="admin-card">
+                                <h3><i class="fa-solid fa-bell"></i> Live Alert Triggers</h3>
+                                <div class="settings-checkboxes"
+                                    style="margin-top:1rem;display:flex;flex-direction:column;gap:0.75rem;">
+                                    <label class="checkbox-row"
+                                        style="display:flex;align-items:center;gap:0.75rem;"><input type="checkbox"
+                                            id="set-severe" checked> Severe Traffic Warnings (>15m bottleneck)</label>
+                                    <label class="checkbox-row"
+                                        style="display:flex;align-items:center;gap:0.75rem;"><input type="checkbox"
+                                            id="set-incidents" checked> Incidents on Saved Commute Corridors</label>
+                                    <label class="checkbox-row"
+                                        style="display:flex;align-items:center;gap:0.75rem;"><input type="checkbox"
+                                            id="set-weather" checked> Heavy Weather Impact Notifications</label>
+                                    <label class="checkbox-row"
+                                        style="display:flex;align-items:center;gap:0.75rem;"><input type="checkbox"
+                                            id="set-route-change" checked> Dynamic Faster Reroute Prompts</label>
+                                </div>
+                            </div>
+
+                            <div class="admin-card">
+                                <h3><i class="fa-solid fa-palette"></i> Display & Telemetry</h3>
+                                <div class="form-group" style="margin-top:1rem;">
+                                    <label>Color Theme</label>
+                                    <select id="set-theme-select" class="custom-select">
+                                        <option value="light">Light Mode (Clean White Cards)</option>
+                                        <option value="dark">Deep Teal Dark Mode</option>
+                                    </select>
+                                </div>
+                                <div class="form-group">
+                                    <label>Speed & Distance Units</label>
+                                    <select id="set-units-select" class="custom-select">
+                                        <option value="km">Kilometers & km/h (Metric)</option>
+                                        <option value="mi">Miles & mph (Imperial)</option>
+                                    </select>
+                                </div>
+                                <div class="form-group">
+                                    <label>Telemetry Refresh Interval</label>
+                                    <select id="set-refresh-select" class="custom-select">
+                                        <option value="5000">5 seconds (Real-time)</option>
+                                        <option value="15000">15 seconds (Balanced)</option>
+                                        <option value="30000">30 seconds (Data saver)</option>
+                                    </select>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- ========================================= -->
+                <!-- VIEW 21: PRIVACY & LEGAL                  -->
+                <!-- ========================================= -->
+                <div class="view-panel" id="view-privacy">
+                    <div class="analytics-layout">
+                        <div class="panel-header-row">
+                            <div>
+                                <h2><i class="fa-solid fa-shield-halved text-teal"></i> Privacy Policy & Legal
+                                    Disclosures</h2>
+                                <span class="subtitle">Data Processing, Geolocation Policies and Licensing</span>
+                            </div>
+                            <a href="/privacy" target="_blank" class="btn btn-outline btn-sm"><i
+                                    class="fa-solid fa-arrow-up-right-from-square"></i> Open Full Document</a>
+                        </div>
+
+                        <div class="admin-card" style="line-height:1.7;color:var(--text-secondary);margin-top:1rem;">
+                            <h3 style="color:var(--accent-mint);margin-bottom:0.5rem;">1. Precise Location & Geolocation
+                                Privacy</h3>
+                            <p>TrafficAI accesses your device's geolocation strictly during active route planning and
+                                live map viewing. GPS coordinates are processed transiently to center maps and calculate
+                                turn-by-turn road routes. Coordinates are transmitted securely over TLS 1.3 encrypted
+                                HTTPS. Persistent GPS tracklogs are never retained, sold, or shared with advertisers.
+                            </p>
+
+                            <h3 style="color:var(--accent-mint);margin-top:1.5rem;margin-bottom:0.5rem;">2. Live Traffic
+                                & Third-Party Telemetry</h3>
+                            <p>Real-time traffic flow data and road incident feeds are requested securely from TomTom NV
+                                and OpenWeatherMap APIs solely for calculation of road delays. Weather data requests are
+                                ephemeral based on map center coordinates.</p>
+
+                            <h3 style="color:var(--accent-mint);margin-top:1.5rem;margin-bottom:0.5rem;">3. Data
+                                Deletion Rights</h3>
+                            <p>You may permanently clear all personal saved places, saved routes, and commute logs at
+                                any time via the Profile screen or Settings. Account deletion requests permanently
+                                remove all records from the SQLite database.</p>
+
+                            <h3 style="color:var(--accent-mint);margin-top:1.5rem;margin-bottom:0.5rem;">4. Open Source
+                                & Data Attributions</h3>
+                            <p>© 2026 TrafficAI. Map tiles © OpenStreetMap contributors & TomTom NV. Weather data ©
+                                OpenWeatherMap.</p>
+                        </div>
+                    </div>
+                </div>
             </main>
         </div>
 
@@ -764,6 +1913,10 @@
         <!-- MOBILE BOTTOM NAVIGATION (PHONES & TABLETS)   -->
         <!-- ============================================= -->
         <nav class="mobile-bottom-nav" id="mobile-bottom-nav">
+            <button class="mobile-nav-btn" data-view="home-dashboard">
+                <i class="fa-solid fa-house"></i>
+                <span>Home</span>
+            </button>
             <button class="mobile-nav-btn active" data-view="live-operations">
                 <i class="fa-solid fa-bolt-lightning"></i>
                 <span>Live</span>
@@ -772,17 +1925,13 @@
                 <i class="fa-solid fa-route"></i>
                 <span>Routes</span>
             </button>
-            <button class="mobile-nav-btn" data-view="forecast">
-                <i class="fa-solid fa-chart-line"></i>
-                <span>Forecast</span>
+            <button class="mobile-nav-btn" data-view="ai-assistant">
+                <i class="fa-solid fa-robot"></i>
+                <span>AI Assist</span>
             </button>
-            <button class="mobile-nav-btn" data-view="incidents">
-                <i class="fa-solid fa-triangle-exclamation"></i>
-                <span>Incidents</span>
-            </button>
-            <button class="mobile-nav-btn" data-view="analytics">
-                <i class="fa-solid fa-chart-simple"></i>
-                <span>Analytics</span>
+            <button class="mobile-nav-btn" id="btn-mobile-more" data-view="more">
+                <i class="fa-solid fa-bars"></i>
+                <span>Menu</span>
             </button>
         </nav>
     </div>
@@ -845,17 +1994,21 @@
     <!-- NOTIFICATION CENTER MODAL                     -->
     <!-- ============================================= -->
     <div class="modal-backdrop" id="modal-notifications">
-        <div class="modal-card" style="max-width: 520px;">
-            <div class="modal-header">
-                <h3><i class="fa-solid fa-bell text-peach"></i> Live Traffic Alerts & Dispatch Feed</h3>
+        <div class="modal-card" style="max-width: 520px; width: 92vw;">
+            <div class="modal-header" style="display: flex; align-items: center; justify-content: space-between;">
+                <div style="display: flex; align-items: center; gap: 8px;">
+                    <h3 style="margin: 0;"><i class="fa-solid fa-bell text-peach"></i> Notifications</h3>
+                    <span id="notif-modal-subtext" class="notif-modal-subtext" style="display: none;">0 Unread</span>
+                </div>
                 <button class="btn-close-modal" id="btn-close-notif-modal"
                     aria-label="Close Notifications">&times;</button>
             </div>
-            <div class="modal-body" style="max-height: 400px; overflow-y: auto;" id="notif-feed-container">
+            <div class="modal-body" style="max-height: 420px; overflow-y: auto;" id="notif-feed-container">
                 <!-- Dynamically populated notifications -->
             </div>
             <div class="modal-footer" style="justify-content: space-between;">
-                <button class="btn btn-outline btn-sm" id="btn-clear-notifications">Clear All</button>
+                <button class="btn btn-outline btn-sm" id="btn-mark-all-read"><i class="fa-solid fa-check-double"></i>
+                    Mark all as read</button>
                 <button class="btn btn-secondary btn-sm" id="btn-close-notif-footer">Close</button>
             </div>
         </div>
@@ -930,6 +2083,14 @@
                             </div>
                             <i class="fa-solid fa-paper-plane link-arrow"></i>
                         </a>
+                        <a href="privacy.html" target="_blank" rel="noopener noreferrer" class="dev-link-item">
+                            <i class="fa-solid fa-shield-halved"></i>
+                            <div class="link-text">
+                                <span class="link-label">Privacy Policy</span>
+                                <span class="link-url">trafficai-taupe.vercel.app/privacy</span>
+                            </div>
+                            <i class="fa-solid fa-arrow-up-right-from-square link-arrow"></i>
+                        </a>
                     </div>
                 </div>
             </div>
@@ -938,13 +2099,255 @@
                 <button class="btn btn-secondary btn-sm" id="btn-close-dev-footer">Close</button>
             </div>
         </div>
+    </div>
+    <!-- ============================================= -->
+    <!-- AUTHENTICATION MODAL (LOGIN / REGISTER / RESET)-->
+    <!-- ============================================= -->
+    <div class="modal-backdrop" id="modal-auth">
+        <div class="modal-card" style="max-width: 440px;">
+            <div class="modal-header">
+                <h3><i class="fa-solid fa-user-shield text-teal"></i> User Account Access</h3>
+                <button class="btn-close-modal" id="btn-close-auth-modal" aria-label="Close Modal">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="auth-tabs-bar">
+                    <button class="auth-tab-btn active" data-tab="auth-tab-login">Login</button>
+                    <button class="auth-tab-btn" data-tab="auth-tab-register">Register</button>
+                    <button class="auth-tab-btn" data-tab="auth-tab-forgot">Forgot Password</button>
+                </div>
+
+                <!-- Tab 1: Login -->
+                <div class="auth-tab-content active" id="auth-tab-login">
+                    <div class="form-group">
+                        <label>Email Address</label>
+                        <input type="email" id="auth-login-email" class="custom-input" placeholder="user@example.com">
+                    </div>
+                    <div class="form-group">
+                        <label>Password</label>
+                        <input type="password" id="auth-login-password" class="custom-input" placeholder="••••••••">
+                    </div>
+                    <button class="btn btn-primary btn-block" id="btn-auth-submit-login"><i
+                            class="fa-solid fa-right-to-bracket"></i> Log In</button>
+                </div>
+
+                <!-- Tab 2: Register -->
+                <div class="auth-tab-content" id="auth-tab-register">
+                    <div class="form-group">
+                        <label>Full Name</label>
+                        <input type="text" id="auth-reg-name" class="custom-input" placeholder="Ankit Rajput">
+                    </div>
+                    <div class="form-group">
+                        <label>Email Address</label>
+                        <input type="email" id="auth-reg-email" class="custom-input" placeholder="user@example.com">
+                    </div>
+                    <div class="form-group">
+                        <label>Password (min. 6 chars)</label>
+                        <input type="password" id="auth-reg-password" class="custom-input" placeholder="••••••••">
+                    </div>
+                    <div class="form-group">
+                        <label>City / Region</label>
+                        <input type="text" id="auth-reg-city" class="custom-input" value="Kanpur, UP">
+                    </div>
+                    <button class="btn btn-primary btn-block" id="btn-auth-submit-register"><i
+                            class="fa-solid fa-user-plus"></i> Create Account</button>
+                </div>
+
+                <!-- Tab 3: Forgot Password -->
+                <div class="auth-tab-content" id="auth-tab-forgot">
+                    <p class="text-muted" style="font-size:12px;margin-bottom:1rem;">Enter your registered email address
+                        to request a secure password reset token.</p>
+                    <div class="form-group">
+                        <label>Registered Email</label>
+                        <input type="email" id="auth-forgot-email" class="custom-input" placeholder="user@example.com">
+                    </div>
+                    <button class="btn btn-primary btn-block" id="btn-auth-submit-forgot"><i
+                            class="fa-solid fa-key"></i> Request Reset</button>
+
+                    <div id="auth-reset-confirm-box" style="display:none;margin-top:1.5rem;">
+                        <hr style="border-color:var(--border-color);margin:1rem 0;">
+                        <div class="form-group">
+                            <label>Reset Token</label>
+                            <input type="text" id="auth-reset-token" class="custom-input"
+                                placeholder="Paste reset token here">
+                        </div>
+                        <div class="form-group">
+                            <label>New Password</label>
+                            <input type="password" id="auth-reset-new-password" class="custom-input"
+                                placeholder="••••••••">
+                        </div>
+                        <button class="btn btn-primary btn-block" id="btn-auth-submit-reset-confirm">Confirm New
+                            Password</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ============================================= -->
+    <!-- USER PROFILE & ACCOUNT SETTINGS MODAL        -->
+    <!-- ============================================= -->
+    <div class="modal-backdrop" id="modal-user-profile">
+        <div class="modal-card" style="max-width: 620px;">
+            <div class="modal-header">
+                <div class="user-header-info">
+                    <div class="user-avatar" id="profile-avatar-box">TU</div>
+                    <div>
+                        <h3 id="profile-user-name">User Profile</h3>
+                        <div style="display:flex;gap:6px;align-items:center;margin-top:2px;">
+                            <span class="user-role-badge" id="profile-user-role">Commuter</span>
+                            <span class="route-tag-pill tag-fast" id="profile-auth-provider">Local Account</span>
+                            <span class="route-tag-pill tag-rec" id="profile-email-verified">Email Verified</span>
+                        </div>
+                    </div>
+                </div>
+                <button class="btn-close-modal" id="btn-close-profile-modal" aria-label="Close Profile">&times;</button>
+            </div>
+            <div class="modal-body" style="max-height: 480px; overflow-y: auto;">
+                <div class="profile-tabs-row">
+                    <button class="prof-tab-btn active" data-tab="prof-tab-overview">Account Info</button>
+                    <button class="prof-tab-btn" data-tab="prof-tab-places">Saved Places</button>
+                    <button class="prof-tab-btn" data-tab="prof-tab-routes">Saved Routes</button>
+                    <button class="prof-tab-btn" data-tab="prof-tab-history">Trip History</button>
+                    <button class="prof-tab-btn" data-tab="prof-tab-prefs">Alerts & Privacy</button>
+                </div>
+
+                <!-- Tab 0: Account Overview & Edit -->
+                <div class="prof-tab-content active" id="prof-tab-overview">
+                    <div class="prefs-section" style="margin-bottom: 1.25rem;">
+                        <h4 style="margin-bottom:0.75rem;"><i class="fa-solid fa-id-card text-teal"></i> Account Details
+                        </h4>
+                        <div style="display:grid;grid-template-columns:1fr 1fr;gap:0.75rem;font-size:12px;">
+                            <div>
+                                <span class="text-dim">Email Address:</span>
+                                <div id="profile-user-email" style="font-weight:600;word-break:break-all;">
+                                    user@traffic.ai</div>
+                            </div>
+                            <div>
+                                <span class="text-dim">Authentication:</span>
+                                <div id="profile-detail-verified"
+                                    style="font-weight:600;color:var(--brand-mint, #8397da);">Enabled ✓</div>
+
+                            </div>
+                            <div>
+                                <span class="text-dim">Member Since:</span>
+                                <div id="profile-created-at" style="font-weight:600;">Sep 2026</div>
+                            </div>
+                            <div>
+                                <span class="text-dim">Verification Status:</span>
+                                <div id="profile-detail-verified"
+                                    style="font-weight:600;color:var(--brand-mint, #10B981);">Verified ✓</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <hr style="border-color:var(--border-color);margin:1rem 0;">
+
+                    <!-- Edit Profile -->
+                    <div class="prefs-section" style="margin-bottom: 1.25rem;">
+                        <h4 style="margin-bottom:0.75rem;"><i class="fa-solid fa-user-pen text-peach"></i> Edit Profile
+                            Information</h4>
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label>Full Name</label>
+                                <input type="text" id="profile-edit-name" class="custom-input" placeholder="Your Name">
+                            </div>
+                            <div class="form-group">
+                                <label>City / Region</label>
+                                <input type="text" id="profile-edit-city" class="custom-input" placeholder="Kanpur, UP">
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label>Phone Number (Optional)</label>
+                            <input type="text" id="profile-edit-phone" class="custom-input"
+                                placeholder="+91-XXXXXXXXXX">
+                        </div>
+                        <button class="btn btn-primary btn-sm" id="btn-save-profile-edits"><i
+                                class="fa-solid fa-floppy-disk"></i> Save Profile Changes</button>
+                    </div>
+
+                    <hr style="border-color:var(--border-color);margin:1rem 0;">
+
+                    <!-- Change Password -->
+                    <div class="prefs-section" id="section-change-password">
+                        <h4 style="margin-bottom:0.75rem;"><i class="fa-solid fa-lock text-amber"></i> Change Password
+                        </h4>
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label>Current Password</label>
+                                <input type="password" id="profile-current-pass" class="custom-input"
+                                    placeholder="Current password">
+                            </div>
+                            <div class="form-group">
+                                <label>New Password (min 6 chars)</label>
+                                <input type="password" id="profile-new-pass" class="custom-input"
+                                    placeholder="New password">
+                            </div>
+                        </div>
+                        <button class="btn btn-outline btn-sm" id="btn-update-password"><i class="fa-solid fa-key"></i>
+                            Update Password</button>
+                    </div>
+                </div>
+
+                <!-- Tab 1: Saved Places -->
+                <div class="prof-tab-content" id="prof-tab-places">
+                    <div class="places-list" id="profile-places-list">
+                        <!-- Injected via app.js -->
+                    </div>
+                </div>
+
+                <!-- Tab 2: Saved Routes -->
+                <div class="prof-tab-content" id="prof-tab-routes">
+                    <div class="routes-list" id="profile-routes-list">
+                        <!-- Injected via app.js -->
+                    </div>
+                </div>
+
+                <!-- Tab 3: Trip History -->
+                <div class="prof-tab-content" id="prof-tab-history">
+                    <div class="history-list" id="profile-trips-list">
+                        <!-- Injected via app.js -->
+                    </div>
+                    <button class="btn btn-outline btn-sm" id="btn-clear-trip-history" style="margin-top:1rem;"><i
+                            class="fa-solid fa-trash"></i> Clear Trip History</button>
+                </div>
+
+                <!-- Tab 4: Preferences & Privacy -->
+                <div class="prof-tab-content" id="prof-tab-prefs">
+                    <div class="prefs-section">
+                        <h4>Notification Alerts</h4>
+                        <label class="checkbox-row"><input type="checkbox" id="chk-pref-severe" checked> Severe Traffic
+                            Warnings</label>
+                        <label class="checkbox-row"><input type="checkbox" id="chk-pref-incidents" checked> Incidents on
+                            Saved Routes</label>
+                        <label class="checkbox-row"><input type="checkbox" id="chk-pref-weather" checked> Weather Impact
+                            Alerts</label>
+                    </div>
+                    <hr style="border-color:var(--border-color);margin:1rem 0;">
+                    <div class="prefs-section">
+                        <h4 class="text-red">Privacy & Data Management</h4>
+                        <button class="btn btn-outline btn-sm" id="btn-request-delete-data"
+                            style="margin-right:0.5rem;"><i class="fa-solid fa-eraser"></i> Clear My Saved Data</button>
+                        <button class="btn btn-danger btn-sm" id="btn-delete-account"><i
+                                class="fa-solid fa-user-xmark"></i> Delete Account</button>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer" style="justify-content: space-between;">
+                <button class="btn btn-outline btn-sm" id="btn-user-logout"><i
+                        class="fa-solid fa-right-from-bracket"></i> Log Out</button>
+                <button class="btn btn-secondary btn-sm" id="btn-close-profile-footer">Close</button>
+            </div>
+        </div>
+    </div>
+
     <!-- ============================================= -->
     <!-- APP INSTALL / DOWNLOAD MODAL                  -->
     <!-- ============================================= -->
-    <div id="modal-app-install" class="modal-backdrop" aria-hidden="true" role="dialog" aria-labelledby="app-install-title">
+    <div id="modal-app-install" class="modal-backdrop" aria-hidden="true" role="dialog"
+        aria-labelledby="app-install-title">
         <div class="modal-card app-install-card">
             <button id="btn-close-app-install" class="btn-modal-close" aria-label="Close modal">&times;</button>
-            
+
             <div class="app-install-header">
                 <div class="app-brand-badge">
                     <div class="brand-badge-icon">TA</div>
@@ -954,7 +2357,8 @@
                     </div>
                 </div>
                 <span class="install-platform-badge" id="install-platform-badge">
-                    <i class="fa-solid fa-mobile-screen"></i> <span id="install-platform-text">Android App Available</span>
+                    <i class="fa-solid fa-mobile-screen"></i> <span id="install-platform-text">Android App
+                        Available</span>
                 </span>
             </div>
 
@@ -982,12 +2386,58 @@
         </div>
     </div>
 
+    <!-- ============================================= -->
+    <!-- SHARE ROUTE MODAL (SCREEN 19)                 -->
+    <!-- ============================================= -->
+    <div class="modal-backdrop" id="modal-share-route">
+        <div class="modal-card" style="max-width: 480px;">
+            <div class="modal-header">
+                <h3><i class="fa-solid fa-share-nodes text-teal"></i> Share Smart Route</h3>
+                <button class="btn-close-modal" id="btn-close-share-modal" aria-label="Close Share">&times;</button>
+            </div>
+            <div class="modal-body">
+                <p style="font-size:13px;color:var(--text-muted);margin-bottom:1rem;">Share your live route, destination
+                    ETA, and corridor traffic conditions with friends or colleagues.</p>
+                <div class="form-group">
+                    <label>Route Summary</label>
+                    <textarea id="share-route-text" class="custom-input" rows="3" readonly
+                        style="resize:none;font-size:12px;font-family:inherit;"></textarea>
+                </div>
+                <div class="form-group">
+                    <label>Shareable Deep Link</label>
+                    <input type="text" id="share-route-link" class="custom-input" readonly style="font-size:12px;">
+                </div>
+                <div style="display:flex;gap:0.75rem;margin-top:1.25rem;">
+                    <button class="btn btn-primary btn-block" id="btn-copy-share-link"><i class="fa-solid fa-copy"></i>
+                        Copy Link</button>
+                    <button class="btn btn-outline btn-block" id="btn-native-share"><i
+                            class="fa-solid fa-arrow-up-from-bracket"></i> Share...</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ============================================= -->
+    <!-- GLOBAL APP LOADER & RESTART OVERLAY (SCREEN 31)-->
+    <!-- ============================================= -->
+    <div class="app-loader-overlay" id="app-loader" style="display:none;">
+        <div class="loader-card">
+            <div class="loader-brand-logo">
+                <i class="fa-solid fa-satellite-dish"></i>
+            </div>
+            <div class="loader-spinner"></div>
+            <h4 id="loader-title">Loading TrafficAI</h4>
+            <p id="loader-subtitle" style="font-size:12px;color:var(--text-muted);margin:0;">Connecting to telemetry
+                providers...</p>
+        </div>
+    </div>
+
     <!-- External Libraries -->
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
     <!-- Core App Script -->
-    <script src="app.js?v=2.2"></script>
+    <script src="app.js?v=3.2.0"></script>
 </body>
 
 </html>

@@ -22,17 +22,17 @@ def run_verifications():
     print("="*60)
 
     # 1. Verify Traffic Classification Module
-    c1 = classify_traffic(48.0, 50.0) # 0.96 ratio -> LOW (Green)
+    c1 = classify_traffic(75.0, 60.0) # > 70.0 km/h -> LOW (Green)
     assert c1["level"] == "LOW"
     assert c1["color"] == "#10b981"
 
-    c2 = classify_traffic(20.0, 50.0) # 0.40 ratio -> SEVERE (Red)
-    assert c2["level"] == "SEVERE"
+    c2 = classify_traffic(20.0, 50.0) # <= 40.0 km/h -> HIGH (Red)
+    assert c2["level"] == "HIGH"
     assert c2["color"] == "#ef4444"
 
-    c3 = classify_traffic(None, 50.0) # Missing -> UNAVAILABLE
-    assert c3["level"] == "UNAVAILABLE"
-    print("[PASS] Traffic Classification Module (Green/Yellow/Orange/Red & Unavailable)")
+    c3 = classify_traffic(None, 50.0) # Missing -> STALE
+    assert c3["level"] == "STALE"
+    print("[PASS] Traffic Classification Module (LOW/MEDIUM/HIGH & STALE)")
 
     # 2. Verify Route Scoring
     s1 = score_route_recommendation(1800, 300, 15000) # 30 min, 5 min delay, 15 km
@@ -52,12 +52,12 @@ def run_verifications():
     assert "lat" in geo_res[0] and "lon" in geo_res[0]
     print(f"[PASS] Global Search Connector (Query: 'Times Square New York' -> Lat: {geo_res[0]['lat']}, Lon: {geo_res[0]['lon']}, Source: {geo_res[0]['source']})")
 
-    # 5. Verify OSRM Global Live Routing
+    # 5. Verify Standalone OSRM Routing Connector
     osrm = OSRMRoutingConnector()
     osrm_res = osrm.get_routes({"lat": 40.7570, "lon": -73.9859}, {"lat": 40.7527, "lon": -73.9772})
     assert osrm_res["success"] is True
     assert len(osrm_res["routes"]) >= 1
-    print(f"[PASS] OSRM Worldwide Live Routing Connector (Distance: {osrm_res['routes'][0]['distance_km']} km, ETA: {osrm_res['routes'][0]['current_eta_minutes']} min)")
+    print(f"[PASS] Standalone OSRM Routing Connector (Distance: {osrm_res['routes'][0]['distance_km']} km, ETA: {osrm_res['routes'][0]['current_eta_minutes']} min)")
 
     # 6. Verify Same Origin / Destination Validation
     router = SmartRouter()

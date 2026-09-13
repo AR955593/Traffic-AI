@@ -7,20 +7,18 @@ from datetime import datetime, timezone
 
 def classify_traffic(current_speed: Optional[float], free_flow_speed: Optional[float] = 60.0) -> Dict[str, Any]:
     """
-    Classifies traffic condition based on current_speed thresholds and speed ratio vs free_flow_speed.
-    Exact speed bands:
-      0 - 20 km/h   -> SEVERE (RED #ef4444)
-      >20 - 40 km/h -> HEAVY (ORANGE #f97316)
-      >40 - 70 km/h -> MODERATE (YELLOW #f59e0b)
-      >70 km/h       -> LOW / FREE FLOW (GREEN #10b981)
-      None / Stale  -> STALE / GRAY (#80928e)
+    Classifies traffic condition into 3 deterministic public tiers based on current_speed thresholds:
+      current_speed <= 40.0 km/h           -> HIGH TRAFFIC (RED #ef4444)
+      >40.0 km/h AND <= 70.0 km/h          -> MEDIUM TRAFFIC (YELLOW #f59e0b)
+      >70.0 km/h                           -> LOW TRAFFIC (GREEN #10b981)
+      None / Stale                         -> STALE / GRAY (#80928e)
     """
     if current_speed is None:
         return {
             "level": "STALE",
             "score": 0,
             "color": "#80928e",  # Slate / Stale Gray
-            "label": "No / Stale Data",
+            "label": "Stale / No Data",
             "speed_ratio": None
         }
 
@@ -28,26 +26,21 @@ def classify_traffic(current_speed: Optional[float], free_flow_speed: Optional[f
     free_flow = float(free_flow_speed) if free_flow_speed and free_flow_speed > 0 else 60.0
     ratio = speed / free_flow
 
-    if speed <= 20.0:
-        level = "SEVERE"
+    if speed <= 40.0:
+        level = "HIGH"
         color = "#ef4444"  # Red
-        label = "Severe Congestion"
-        score = int(min(100, 75 + (20.0 - speed) * 1.25))
-    elif speed <= 40.0:
-        level = "HEAVY"
-        color = "#f97316"  # Orange
-        label = "Heavy Traffic"
-        score = int(51 + (40.0 - speed) * 1.2)
+        label = "High Traffic"
+        score = int(min(100, 50 + (40.0 - speed) * 1.25))
     elif speed <= 70.0:
-        level = "MODERATE"
+        level = "MEDIUM"
         color = "#f59e0b"  # Yellow
-        label = "Moderate Traffic"
-        score = int(26 + (70.0 - speed) * 0.8)
+        label = "Medium Traffic"
+        score = int(25 + (70.0 - speed) * 0.8)
     else:
         level = "LOW"
         color = "#10b981"  # Green
-        label = "Free Flow"
-        score = int(max(0, min(25, (1.0 - ratio) * 100)))
+        label = "Low Traffic"
+        score = int(max(0, min(24, (1.0 - ratio) * 100)))
 
     return {
         "level": level,

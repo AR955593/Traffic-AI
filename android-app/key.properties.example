@@ -1,0 +1,8 @@
+# TrafficAI Android Release Signing Properties Example
+# Copy this file to key.properties and update credentials for production release signing.
+# Do NOT commit key.properties to source control!
+
+storePassword=YOUR_STORE_PASSWORD
+keyPassword=YOUR_KEY_PASSWORD
+keyAlias=trafficai
+storeFile=../release.keystore

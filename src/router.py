@@ -63,11 +63,14 @@ class SmartRouter:
         orig_dict = {"lat": orig_lat, "lon": orig_lon}
         dest_dict = {"lat": dest_lat, "lon": dest_lon}
 
-        # If DEMO mode is explicitly requested, skip live API calls
-        if explicit_mode == "DEMO" or preference == "demo":
-            return self._plan_demo_kanpur_route(orig_lat, orig_lon, dest_lat, dest_lon, preference, departure_time, avoid_incidents, avoid_highways)
+        # If DEMO or OFFLINE mode is explicitly requested by caller, return demo route
+        if explicit_mode in ["DEMO", "OFFLINE"] or preference == "demo":
+            res = self._plan_demo_kanpur_route(orig_lat, orig_lon, dest_lat, dest_lon, preference, departure_time, avoid_incidents, avoid_highways)
+            res["mode"] = "DEMO"
+            res["status_label"] = "🟡 DEMO / OFFLINE MODE"
+            return res
 
-        # 2. Try TomTom Real-Time Routing API
+        # 2. Live Mode: Require real TomTom Real-Time Routing API
         tomtom_conn = TomTomRoutingConnector()
         tomtom_res = tomtom_conn.get_routes(orig_dict, dest_dict, max_alternatives=2)
 
@@ -86,30 +89,17 @@ class SmartRouter:
                 "updated_at": datetime.now(timezone.utc).isoformat()
             }
 
-        # 3. Fallback to OSRM Live Worldwide Routing if TomTom key is missing or returns error (e.g. 401)
-        osrm_conn = OSRMRoutingConnector()
-        osrm_res = osrm_conn.get_routes(orig_dict, dest_dict)
-
-        if osrm_res.get("success") and osrm_res.get("routes"):
-            # Explicitly mark that routing is live via OSRM but TomTom live flow is unavailable
-            error_note = tomtom_res.get("message", "TomTom API unavailable")
-            return {
-                "success": True,
-                "provider": "OSRM OpenStreetMap",
-                "mode": "LIVE_ROUTING_NO_TRAFFIC",
-                "status_label": "🟡 ROUTING ONLY (LIVE TRAFFIC UNAVAILABLE)",
-                "provider_error": error_note,
-                "origin": {"lat": orig_lat, "lon": orig_lon},
-                "destination": {"lat": dest_lat, "lon": dest_lon},
-                "departure_time": departure_time,
-                "preference": preference,
-                "recommended_route_id": osrm_res["routes"][0]["id"],
-                "routes": osrm_res["routes"],
-                "updated_at": datetime.now(timezone.utc).isoformat()
-            }
-
-        # 4. If all external APIs fail (offline / DNS error), fallback to network graph routing
-        return self._plan_demo_kanpur_route(orig_lat, orig_lon, dest_lat, dest_lon, preference, departure_time, avoid_incidents, avoid_highways)
+        # 3. If TomTom fails or is rate-limited, return explicit UNAVAILABLE status in LIVE mode
+        err_msg = tomtom_res.get("message") or "TomTom Live Routing service unavailable or rate limited."
+        return {
+            "success": False,
+            "provider": "TomTom NV",
+            "mode": "UNAVAILABLE",
+            "status_label": "🔴 ROUTING UNAVAILABLE / LIVE DATA UNAVAILABLE",
+            "error": "Routing service currently unavailable.",
+            "message": err_msg,
+            "routes": []
+        }
 
     def _plan_demo_kanpur_route(self, orig_lat, orig_lon, dest_lat, dest_lon, preference, departure_time, avoid_incidents, avoid_highways):
         orig_n, orig_coords, _ = self.geocoding.snap_to_nearest_node(orig_lat, orig_lon)

@@ -8,3 +8,9 @@ android-app/build/
 .idea/
 .vscode/
 *.log
+key.properties
+*.keystore
+*.jks
+scratch/
+data/traffic_ai.db
+

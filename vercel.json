@@ -16,6 +16,10 @@
       "dest": "/api/index.py"
     },
     {
+      "src": "/privacy",
+      "dest": "/api/index.py"
+    },
+    {
       "src": "/(.*)",
       "dest": "/frontend/$1"
     }
