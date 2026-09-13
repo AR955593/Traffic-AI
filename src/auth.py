@@ -230,22 +230,34 @@ class AuthManager:
         return u
 
     def get_user_by_id(self, user_id: str) -> Optional[Dict[str, Any]]:
-        db = get_mongo_db()
-        doc = db.users.find_one({"id": user_id})
-        return self._clean_user_doc(doc)
+        try:
+            db = get_mongo_db()
+            doc = db.users.find_one({"id": user_id})
+            return self._clean_user_doc(doc)
+        except Exception as e:
+            print(f"[AuthManager] Note on get_user_by_id mongo query: {e}")
+            return None
 
     def get_user_by_email(self, email: str) -> Optional[Dict[str, Any]]:
-        db = get_mongo_db()
-        norm = normalize_email(email)
-        doc = db.users.find_one({"email_normalized": norm})
-        return self._clean_user_doc(doc)
+        try:
+            db = get_mongo_db()
+            norm = normalize_email(email)
+            doc = db.users.find_one({"email_normalized": norm})
+            return self._clean_user_doc(doc)
+        except Exception as e:
+            print(f"[AuthManager] Note on get_user_by_email mongo query: {e}")
+            return None
 
     def get_user_raw(self, user_id_or_email: str) -> Optional[Dict[str, Any]]:
         """Internal helper returning raw user document including password_hash."""
-        db = get_mongo_db()
-        norm = normalize_email(user_id_or_email)
-        doc = db.users.find_one({"$or": [{"id": user_id_or_email}, {"email_normalized": norm}]})
-        return doc
+        try:
+            db = get_mongo_db()
+            norm = normalize_email(user_id_or_email)
+            doc = db.users.find_one({"$or": [{"id": user_id_or_email}, {"email_normalized": norm}]})
+            return doc
+        except Exception as e:
+            print(f"[AuthManager] Note on get_user_raw mongo query: {e}")
+            return None
 
     def _get_permissions_for_role(self, role: str) -> List[str]:
         r = role.upper()
