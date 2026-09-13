@@ -82,21 +82,23 @@ Test File Results:
 ## 5. Signed Release Build Artifacts (Fresh Clean Build)
 
 - **Application ID:** `com.arrajput.trafficai`
-- **Version Code:** `1`
-- **Version Name:** `1.0.0`
+- **Version Code:** `20022`
+- **Version Name:** `2.0.2.2`
+- **Source Commit SHA:** `2be55b1480f2d48bb7493a7d4d4aa485dfd6efec` (HEAD on origin/main)
 - **Build Status:** **BUILD SUCCESSFUL**
-- **Build Timestamp:** `2026-09-13T11:01:18Z`
+- **Build Timestamp:** `2026-09-13T16:43:50+05:30`
 
 ### Release APK (Fresh Build)
 - **Path:** [`android-app/app/build/outputs/apk/release/app-release.apk`](file:///c:/Users/ankit/OneDrive/Desktop/project/android-app/app/build/outputs/apk/release/app-release.apk)
 - **Convenience Copy:** [`android-app/Traffic_AI.apk`](file:///c:/Users/ankit/OneDrive/Desktop/project/android-app/Traffic_AI.apk)
-- **Size:** `20,943,503 bytes` (19.97 MB)
-- **SHA-256:** `eb0e193931d52fbebc4dfa01d9b3f3c331c7e2b81e96116923d6776333d547e7`
+- **Size:** `20,943,951 bytes` (19.97 MB)
+- **SHA-256:** `7FC81EE0D7FAD66DE2762B595E56A72FB100D3ADA54A60E70DC5C79E769E8EB2`
+- **Verification Note:** `android-app/Traffic_AI.apk` is an exact, newly generated copy of `app-release.apk` with identical SHA-256 hash.
 
 ### Release AAB (Android App Bundle)
 - **Path:** [`android-app/app/build/outputs/bundle/release/app-release.aab`](file:///c:/Users/ankit/OneDrive/Desktop/project/android-app/app/build/outputs/bundle/release/app-release.aab)
-- **Size:** `20,497,551 bytes` (19.55 MB)
-- **SHA-256:** `46fb6eee7a1e52243b481cb3f55378676b0228ef0c15a116ee94e59ddc8a6a63`
+- **Size:** `20,497,976 bytes` (19.55 MB)
+- **SHA-256:** `774F9DFCAF35CFACE302B6B40F8A9E79CF647B49182EECEED74604E1CA6583B5`
 
 ---
 
