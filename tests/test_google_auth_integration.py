@@ -30,7 +30,7 @@ sys.path.append(os.path.join(project_dir, "src"))
 sys.path.append(os.path.join(project_dir, "app"))
 
 from app.main import app
-from auth import AuthManager, generate_jwt_token, decode_jwt_token, hash_password
+from auth import AuthManager, generate_jwt_token, decode_jwt_token, decode_access_token, hash_password
 from mongo_db import get_mongo_db
 
 client = TestClient(app)

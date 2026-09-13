@@ -145,8 +145,11 @@ def compute_initials(name: str) -> str:
 class AuthManager:
     def __init__(self):
         self.audit_logger = AuditLogger()
-        init_mongo_indexes()
-        self._seed_default_users()
+        try:
+            init_mongo_indexes()
+            self._seed_default_users()
+        except Exception as e:
+            print(f"[AuthManager] Warning during MongoDB init/seed: {e}")
         # Default active session user
         self.current_user = self.get_user_by_id("usr_operator") or {
             "id": "usr_operator",
