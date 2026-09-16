@@ -154,6 +154,12 @@ class AuditLogger:
     def __init__(self):
         pass
 
+    def log(self, user_id: str, action: str, target_type: Optional[str] = None, target_id: Optional[str] = None, metadata: Optional[dict] = None) -> Dict[str, Any]:
+        details_str = f"Target: {target_type or 'system'} ({target_id or 'none'})"
+        if metadata:
+            details_str += f" | {metadata}"
+        return self.log_action(action_type=action, actor=user_id, details=details_str)
+
     def log_action(self, action_type: str, actor: str, details: str) -> Dict[str, Any]:
         entry = {
             "log_id": f"AUD-{uuid.uuid4().hex[:8].upper()}",

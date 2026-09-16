@@ -242,6 +242,11 @@ class UserService:
         severity: str = "MEDIUM",
         source: str = "system",
         source_id: Optional[str] = None,
+        source_role: str = "SYSTEM",
+        source_user_id: Optional[str] = None,
+        related_entity_type: Optional[str] = None,
+        related_entity_id: Optional[str] = None,
+        expires_at: Optional[str] = None,
         dedupe_key: Optional[str] = None,
         metadata: Optional[dict] = None
     ) -> Optional[Dict[str, Any]]:
@@ -263,13 +268,20 @@ class UserService:
         doc = {
             "id": notif_id,
             "notification_id": notif_id,
+            "recipient_user_id": user_id,
             "user_id": user_id,
+            "notification_type": notif_type,
             "type": notif_type,
             "title": title,
             "message": message,
-            "severity": severity,
+            "severity": severity.upper(),
             "source": source,
             "source_id": source_id,
+            "source_role": source_role.upper(),
+            "source_user_id": source_user_id,
+            "related_entity_type": related_entity_type,
+            "related_entity_id": related_entity_id,
+            "expires_at": expires_at,
             "dedupe_key": dedupe_key,
             "created_at": now_str,
             "read_at": None,
@@ -280,9 +292,138 @@ class UserService:
         self.db.notifications.insert_one(doc.copy())
         return {k: v for k, v in doc.items() if k != "_id"}
 
+    def create_user_notification(
+        self,
+        user_id: str,
+        notif_type: str,
+        title: str,
+        message: str,
+        severity: str = "MEDIUM",
+        source_role: str = "SYSTEM",
+        source_user_id: Optional[str] = None,
+        related_entity_type: Optional[str] = None,
+        related_entity_id: Optional[str] = None,
+        dedupe_key: Optional[str] = None,
+        metadata: Optional[dict] = None
+    ) -> Optional[Dict[str, Any]]:
+        """Creates a targeted user notification."""
+        return self.create_notification(
+            user_id=user_id,
+            notif_type=notif_type,
+            title=title,
+            message=message,
+            severity=severity,
+            source="user_service",
+            source_role=source_role,
+            source_user_id=source_user_id,
+            related_entity_type=related_entity_type,
+            related_entity_id=related_entity_id,
+            dedupe_key=dedupe_key,
+            metadata=metadata
+        )
+
+    def create_operator_notification(
+        self,
+        user_id: str,
+        notif_type: str,
+        title: str,
+        message: str,
+        severity: str = "MEDIUM",
+        source_role: str = "SYSTEM",
+        source_user_id: Optional[str] = None,
+        related_entity_type: Optional[str] = None,
+        related_entity_id: Optional[str] = None,
+        dedupe_key: Optional[str] = None,
+        metadata: Optional[dict] = None
+    ) -> Optional[Dict[str, Any]]:
+        """Creates a targeted operator notification."""
+        return self.create_notification(
+            user_id=user_id,
+            notif_type=notif_type,
+            title=title,
+            message=message,
+            severity=severity,
+            source="operator_service",
+            source_role=source_role,
+            source_user_id=source_user_id,
+            related_entity_type=related_entity_type,
+            related_entity_id=related_entity_id,
+            dedupe_key=dedupe_key,
+            metadata=metadata
+        )
+
+    def create_admin_notification(
+        self,
+        user_id: str,
+        notif_type: str,
+        title: str,
+        message: str,
+        severity: str = "MEDIUM",
+        source_role: str = "SYSTEM",
+        source_user_id: Optional[str] = None,
+        related_entity_type: Optional[str] = None,
+        related_entity_id: Optional[str] = None,
+        dedupe_key: Optional[str] = None,
+        metadata: Optional[dict] = None
+    ) -> Optional[Dict[str, Any]]:
+        """Creates a targeted admin notification."""
+        return self.create_notification(
+            user_id=user_id,
+            notif_type=notif_type,
+            title=title,
+            message=message,
+            severity=severity,
+            source="admin_service",
+            source_role=source_role,
+            source_user_id=source_user_id,
+            related_entity_type=related_entity_type,
+            related_entity_id=related_entity_id,
+            dedupe_key=dedupe_key,
+            metadata=metadata
+        )
+
+    def create_role_notification(
+        self,
+        target_role: str,
+        notif_type: str,
+        title: str,
+        message: str,
+        severity: str = "MEDIUM",
+        source_role: str = "SYSTEM",
+        source_user_id: Optional[str] = None,
+        related_entity_type: Optional[str] = None,
+        related_entity_id: Optional[str] = None,
+        dedupe_key: Optional[str] = None,
+        metadata: Optional[dict] = None
+    ) -> List[Dict[str, Any]]:
+        """Creates notifications for all users with a matching target role."""
+        role_upper = target_role.upper()
+        users = list(self.db.users.find({"role": role_upper}))
+        created = []
+        for u in users:
+            uid = u.get("id") or str(u.get("_id"))
+            dk = f"{dedupe_key}_{uid}" if dedupe_key else None
+            n = self.create_notification(
+                user_id=uid,
+                notif_type=notif_type,
+                title=title,
+                message=message,
+                severity=severity,
+                source="role_service",
+                source_role=source_role,
+                source_user_id=source_user_id,
+                related_entity_type=related_entity_type,
+                related_entity_id=related_entity_id,
+                dedupe_key=dk,
+                metadata=metadata
+            )
+            if n:
+                created.append(n)
+        return created
+
     def get_user_notifications(self, user_id: str, limit: int = 50, unread_only: bool = False) -> List[Dict[str, Any]]:
         # Auto-seed role-specific default notifications ONLY in demo/dev mode if user has 0 notifications
-        total_count = self.db.notifications.count_documents({"user_id": user_id})
+        total_count = self.db.notifications.count_documents({"$or": [{"user_id": user_id}, {"recipient_user_id": user_id}]})
         if total_count == 0 and (not IS_PRODUCTION or os.getenv("DEMO_MODE")):
             user_doc = self.db.users.find_one({"$or": [{"id": user_id}, {"_id": user_id}]}) or {}
             role = user_doc.get("role", "USER")
@@ -300,32 +441,41 @@ class UserService:
                 self.create_notification(user_id, "CONGESTION", "Mall Road Traffic Delay", "Heavy traffic detected on Mall Road, Kanpur (+12 min delay). Consider alternative routes.", "MEDIUM", "traffic_alert", dedupe_key=f"init_usr_delay_{user_id}")
                 self.create_notification(user_id, "WEATHER", "Rainfall Advisory", "Light rain reported near Kanpur Central. Drive carefully with headlights on.", "LOW", "weather", dedupe_key=f"init_usr_wth_{user_id}")
 
-        query = {"user_id": user_id}
+        query = {"$or": [{"user_id": user_id}, {"recipient_user_id": user_id}]}
         if unread_only:
             query["read_at"] = None
 
         cursor = self.db.notifications.find(query, {"_id": 0}).sort("created_at", -1).limit(limit)
         return list(cursor)
 
+    def get_notifications(self, user_id: str, limit: int = 50, unread_only: bool = False) -> List[Dict[str, Any]]:
+        """Alias for get_user_notifications."""
+        return self.get_user_notifications(user_id, limit=limit, unread_only=unread_only)
+
     def get_unread_count(self, user_id: str) -> int:
-        return self.db.notifications.count_documents({"user_id": user_id, "read_at": None})
+        return self.db.notifications.count_documents({"$or": [{"user_id": user_id}, {"recipient_user_id": user_id}], "read_at": None})
 
     def mark_notification_read(self, user_id: str, notification_id: str) -> bool:
         now_str = datetime.now(timezone.utc).isoformat()
         res = self.db.notifications.update_one(
-            {"user_id": user_id, "$or": [{"id": notification_id}, {"notification_id": notification_id}]},
+            {"recipient_user_id": user_id, "$or": [{"id": notification_id}, {"notification_id": notification_id}]},
             {"$set": {"read_at": now_str, "read": True}}
         )
         return res.modified_count > 0 or res.matched_count > 0
 
+    def mark_all_notifications_read(self, user_id: str) -> int:
+        """Alias for mark_all_read."""
+        return self.mark_all_read(user_id)
+
     def mark_all_read(self, user_id: str) -> int:
         now_str = datetime.now(timezone.utc).isoformat()
         res = self.db.notifications.update_many(
-            {"user_id": user_id, "read_at": None},
+            {"$or": [{"user_id": user_id}, {"recipient_user_id": user_id}], "read_at": None},
             {"$set": {"read_at": now_str, "read": True}}
         )
         return res.modified_count
 
     def delete_notification(self, user_id: str, notification_id: str) -> bool:
-        res = self.db.notifications.delete_one({"user_id": user_id, "$or": [{"id": notification_id}, {"notification_id": notification_id}]})
+        res = self.db.notifications.delete_one({"recipient_user_id": user_id, "$or": [{"id": notification_id}, {"notification_id": notification_id}]})
         return res.deleted_count > 0
+

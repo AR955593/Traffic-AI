@@ -117,11 +117,21 @@ def init_mongo_indexes():
 
         # 9. Notifications Indexes
         db.notifications.create_index([("user_id", ASCENDING), ("created_at", ASCENDING)], name="idx_notif_user_time")
-        db.notifications.create_index([("user_id", ASCENDING), ("read_at", ASCENDING)], name="idx_notif_user_read")
+        db.notifications.create_index([("recipient_user_id", ASCENDING), ("created_at", ASCENDING)], name="idx_notif_recip_time")
+        db.notifications.create_index([("recipient_user_id", ASCENDING), ("read_at", ASCENDING)], name="idx_notif_recip_read")
+        db.notifications.create_index([("related_entity_id", ASCENDING)], sparse=True, name="idx_notif_related_entity")
+        db.notifications.create_index([("expires_at", ASCENDING)], sparse=True, name="idx_notif_expires")
         db.notifications.create_index([("dedupe_key", ASCENDING)], sparse=True, name="idx_notif_dedupe")
 
         # 10. Audit Logs Indexes
         db.audit_logs.create_index([("user_id", ASCENDING), ("created_at", ASCENDING)], name="idx_audit_logs_user_time")
+
+        # 11. Support Tickets Indexes
+        db.support_tickets.create_index([("ticket_id", ASCENDING)], unique=True, name="idx_tickets_id_unique")
+        db.support_tickets.create_index([("user_id", ASCENDING), ("created_at", ASCENDING)], name="idx_tickets_user_time")
+        db.support_tickets.create_index([("status", ASCENDING), ("created_at", ASCENDING)], name="idx_tickets_status_time")
+        db.support_tickets.create_index([("assigned_operator_id", ASCENDING)], sparse=True, name="idx_tickets_assigned_op")
+        db.support_tickets.create_index([("assigned_admin_id", ASCENDING)], sparse=True, name="idx_tickets_assigned_adm")
 
         return True
     except Exception as e:

@@ -337,6 +337,10 @@
                     <i class="fa-solid fa-gear"></i>
                     <span>Settings & Alerts</span>
                 </button>
+                <button class="nav-item commuter-nav-item" data-view="help-center">
+                    <i class="fa-solid fa-headset text-teal"></i>
+                    <span>Help Center & Support</span>
+                </button>
 
                 <!-- OPERATOR NAVIGATION -->
                 <div class="nav-section-title operator-nav-item" style="display:none;">TRAFFIC OPERATIONS</div>
@@ -2326,6 +2330,48 @@
                         </div>
                     </div>
                 </div>
+
+                <!-- ========================================= -->
+                <!-- HELP CENTER & SUPPORT TICKETS PANEL        -->
+                <!-- ========================================= -->
+                <div class="view-panel" id="view-help-center" style="display:none;">
+                    <div class="panel-header glass-card" style="margin-bottom:16px;">
+                        <div>
+                            <h2 style="margin:0;"><i class="fa-solid fa-headset text-teal"></i> Help Center & Support Desk</h2>
+                            <p class="text-muted" style="margin:4px 0 0 0;font-size:13px;">Search verified troubleshooting guides or submit a support request for operator/admin review.</p>
+                        </div>
+                        <div class="header-actions">
+                            <button class="btn btn-primary" id="btn-open-report-problem">
+                                <i class="fa-solid fa-circle-plus"></i> Report a Problem
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- KNOWLEDGE BASE SEARCH STRIP -->
+                    <div class="glass-card mb-4" style="padding:20px;margin-bottom:20px;">
+                        <h4 style="margin:0 0 12px 0;"><i class="fa-solid fa-magnifying-glass"></i> Search Help Articles</h4>
+                        <div style="display:flex;gap:12px;align-items:center;">
+                            <input type="text" id="kb-search-input" class="form-control" placeholder="Search articles (e.g. login, route planner, GPS location, weather, mobile app...)" style="flex:1;">
+                            <button class="btn btn-secondary" id="btn-search-kb"><i class="fa-solid fa-search"></i> Search</button>
+                        </div>
+                        <div id="kb-search-results" style="margin-top:16px;display:grid;grid-template-columns:repeat(auto-fill, minmax(320px, 1fr));gap:12px;"></div>
+                    </div>
+
+                    <!-- MY SUPPORT REQUESTS LIST -->
+                    <div class="glass-card" style="padding:20px;">
+                        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
+                            <h3 style="margin:0;"><i class="fa-solid fa-ticket text-amber"></i> My Support Requests</h3>
+                            <button class="btn btn-outline btn-sm" id="btn-refresh-tickets"><i class="fa-solid fa-rotate"></i> Refresh</button>
+                        </div>
+
+                        <div id="support-tickets-list-container">
+                            <div class="empty-state-card text-center" style="padding:40px;">
+                                <i class="fa-solid fa-headset fa-3x text-muted" style="margin-bottom:12px;"></i>
+                                <p style="color:var(--text-muted);">No support requests submitted yet.</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
             </main>
         </div>
 
@@ -2406,6 +2452,107 @@
             <div class="modal-footer">
                 <button class="btn btn-secondary" id="btn-cancel-incident">Cancel</button>
                 <button class="btn btn-primary" id="btn-submit-incident">Dispatch Incident</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ============================================= -->
+    <!-- REPORT A PROBLEM MODAL                        -->
+    <!-- ============================================= -->
+    <div class="modal-backdrop" id="modal-report-problem" style="display:none;">
+        <div class="modal-card" style="max-width: 580px; width: 92vw;">
+            <div class="modal-header">
+                <h3><i class="fa-solid fa-headset text-teal"></i> Report a Problem / Ask for Help</h3>
+                <button class="btn-close-modal" id="btn-close-report-problem">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="form-group">
+                    <label>Problem Category <span style="color:var(--accent-peach);">*</span></label>
+                    <select id="problem-category-select" class="custom-input">
+                        <option value="">[ Select Category ]</option>
+                        <option value="ROUTE_PLANNER">Route Planner & Navigation</option>
+                        <option value="LIVE_TRAFFIC">Live Traffic & Map</option>
+                        <option value="GPS_LOCATION">GPS & Location Permissions</option>
+                        <option value="WEATHER">Weather Advisory</option>
+                        <option value="LOGIN_REGISTRATION">Login / Registration</option>
+                        <option value="NOTIFICATIONS">Notifications & Alerts</option>
+                        <option value="SAVED_PLACES_ROUTES">Saved Places & Routes</option>
+                        <option value="MOBILE_APP">Mobile App / Android</option>
+                        <option value="ACCOUNT">Account & Privacy</option>
+                        <option value="OTHER">Other Problem</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>Subject / Problem Title <span style="color:var(--accent-peach);">*</span></label>
+                    <input type="text" id="problem-subject-input" class="custom-input" placeholder="e.g. Route calculation is not working for Mall Road">
+                </div>
+                <div class="form-group">
+                    <label>Describe your problem <span style="color:var(--accent-peach);">*</span></label>
+                    <textarea id="problem-desc-input" class="custom-input" rows="4" placeholder="Detailed description of what happened, error message, or steps to reproduce..."></textarea>
+                </div>
+                <div class="form-row" style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+                    <div class="form-group">
+                        <label>Related Feature</label>
+                        <select id="problem-feature-select" class="custom-input">
+                            <option value="Route Planner">Route Planner</option>
+                            <option value="Live Traffic">Live Traffic</option>
+                            <option value="Traffic Map">Traffic Map</option>
+                            <option value="Weather">Weather</option>
+                            <option value="Notifications">Notifications</option>
+                            <option value="Login / Registration">Login / Registration</option>
+                            <option value="Account">Account</option>
+                            <option value="Mobile App">Mobile App</option>
+                            <option value="Other">Other</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>Priority Level</label>
+                        <select id="problem-priority-select" class="custom-input">
+                            <option value="NORMAL">Normal</option>
+                            <option value="IMPORTANT">Important</option>
+                            <option value="URGENT">Urgent</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer" style="justify-content:flex-end;gap:12px;">
+                <button class="btn btn-secondary" id="btn-cancel-report-problem">Cancel</button>
+                <button class="btn btn-primary" id="btn-submit-support-request"><i class="fa-solid fa-paper-plane"></i> Submit Request</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ============================================= -->
+    <!-- SUPPORT TICKET DETAIL MODAL                   -->
+    <!-- ============================================= -->
+    <div class="modal-backdrop" id="modal-ticket-detail" style="display:none;">
+        <div class="modal-card" style="max-width: 650px; width: 92vw;">
+            <div class="modal-header" style="display:flex;justify-content:space-between;align-items:center;">
+                <div>
+                    <h3 id="ticket-detail-id-subject" style="margin:0;"><i class="fa-solid fa-ticket text-amber"></i> #TI-100001</h3>
+                    <span id="ticket-detail-status-pill" class="badge-status">In Progress</span>
+                </div>
+                <button class="btn-close-modal" id="btn-close-ticket-detail">&times;</button>
+            </div>
+            <div class="modal-body" style="max-height: 480px; overflow-y: auto;">
+                <div id="ticket-verified-solution-box" style="display:none;background:rgba(16,185,129,0.1);border:1px solid rgba(16,185,129,0.3);padding:14px;border-radius:8px;margin-bottom:16px;">
+                    <h4 style="margin:0 0 6px 0;color:var(--accent-mint);"><i class="fa-solid fa-robot"></i> Verified Knowledge Base Solution</h4>
+                    <div id="ticket-verified-solution-text" style="font-size:13px;white-space:pre-wrap;color:var(--text-main);"></div>
+                </div>
+
+                <div id="ticket-messages-thread" style="display:flex;flex-direction:column;gap:12px;">
+                    <!-- Messages populated dynamically -->
+                </div>
+            </div>
+            <div class="modal-footer" style="flex-direction:column;gap:10px;align-items:stretch;">
+                <div style="display:flex;gap:8px;">
+                    <input type="text" id="ticket-reply-input" class="custom-input" placeholder="Write a reply..." style="flex:1;">
+                    <button class="btn btn-primary" id="btn-send-ticket-reply"><i class="fa-solid fa-paper-plane"></i> Reply</button>
+                </div>
+                <div style="display:flex;justify-content:space-between;align-items:center;margin-top:4px;">
+                    <button class="btn btn-outline btn-sm text-red" id="btn-close-own-ticket"><i class="fa-solid fa-circle-check"></i> Mark as Resolved</button>
+                    <span style="font-size:11px;color:var(--text-muted);" id="ticket-last-updated-text">Updated just now</span>
+                </div>
             </div>
         </div>
     </div>

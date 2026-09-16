@@ -2128,7 +2128,7 @@ body.theme-dark .text-red { color: #f87171; }
 
 @media (max-width: 768px) {
     body {
-        padding-bottom: calc(54px + env(safe-area-inset-bottom, 0px));
+        padding-bottom: calc(56px + max(8px, env(safe-area-inset-bottom, 0px)));
     }
 
     .mobile-bottom-nav {
@@ -2137,14 +2137,41 @@ body.theme-dark .text-red { color: #f87171; }
         left: 0;
         right: 0;
         padding-bottom: max(6px, env(safe-area-inset-bottom, 0px));
-        height: calc(54px + max(6px, env(safe-area-inset-bottom, 0px)));
+        height: calc(56px + max(6px, env(safe-area-inset-bottom, 0px)));
         z-index: 600;
+        background: var(--bg-header, #203531);
+        border-top: 1px solid rgba(255, 255, 255, 0.08);
     }
 
     .mobile-nav-btn {
         flex: 1;
         min-width: 0;
         padding: 6px 2px;
+        min-height: 44px;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        gap: 2px;
+        color: var(--traffic-mint, #d1e8e2);
+        font-size: 10px;
+        font-weight: 500;
+        background: transparent;
+        border: none;
+    }
+
+    .mobile-nav-btn i {
+        font-size: 16px;
+        color: var(--traffic-sand, #d9b08c);
+    }
+
+    .mobile-nav-btn.active {
+        color: #ffffff;
+        font-weight: 700;
+    }
+
+    .mobile-nav-btn.active i {
+        color: var(--traffic-peach, #ffcb9a);
     }
 
     .top-header {
@@ -2161,9 +2188,9 @@ body.theme-dark .text-red { color: #f87171; }
     }
 
     .city-selector-badge {
-        max-width: 140px;
-        padding: 4px 8px;
-        font-size: 11px;
+        max-width: 130px;
+        padding: 4px 6px;
+        font-size: 10px;
     }
 
     .header-right .user-info-text,
@@ -2228,16 +2255,16 @@ body.theme-dark .text-red { color: #f87171; }
     body:not(.map-fullscreen-mode) .map-wrapper:not(.map-fullscreen),
     body:not(.map-fullscreen-mode) #traffic-map,
     body:not(.map-fullscreen-mode) .traffic-map {
-        height: clamp(320px, 42vh, 480px);
-        min-height: 320px;
-        max-height: 480px;
+        height: clamp(300px, 40vh, 440px);
+        min-height: 300px;
+        max-height: 440px;
         width: 100%;
     }
 
     .map-floating-top {
         top: 8px;
         left: 8px;
-        right: 58px; /* Leave space for Top-Right Fullscreen button */
+        right: 58px;
         flex-direction: column;
         align-items: stretch;
         gap: 5px;
@@ -2341,10 +2368,94 @@ body.theme-dark .text-red { color: #f87171; }
         width: 100%;
     }
 
-    .charts-grid-2col, .form-row {
-        grid-template-columns: 1fr;
+    .charts-grid-2col, .form-row, .admin-sections-grid, .op-grid-responsive {
+        grid-template-columns: 1fr !important;
+    }
+
+    /* Operator Triage Table -> Mobile Cards Transformation */
+    #op-triage-table-body, #op-triage-table-body tr {
+        display: flex;
+        flex-direction: column;
+        width: 100%;
+    }
+
+    #op-triage-table-body tr {
+        background: var(--bg-card-subtle, #19322e);
+        border: 1px solid var(--border-color, rgba(209, 232, 226, 0.15));
+        border-radius: 8px;
+        padding: 12px;
+        margin-bottom: 10px;
+        gap: 6px;
+    }
+
+    #op-triage-table-body td {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 4px 0;
+        border: none;
+        font-size: 12px;
+    }
+
+    #op-triage-table-body td:last-child {
+        margin-top: 8px;
+        flex-direction: column;
+        gap: 6px;
+    }
+
+    #op-triage-table-body td:last-child button,
+    #op-triage-table-body td:last-child .btn-group {
+        width: 100%;
+        justify-content: center;
+    }
+
+    /* Admin Operators Table -> Mobile Cards Transformation */
+    #adm-operators-tbody, #adm-operators-tbody tr {
+        display: flex;
+        flex-direction: column;
+        width: 100%;
+    }
+
+    #adm-operators-tbody tr {
+        background: var(--bg-card-subtle, #19322e);
+        border: 1px solid var(--border-color, rgba(209, 232, 226, 0.15));
+        border-radius: 8px;
+        padding: 12px;
+        margin-bottom: 10px;
+        gap: 6px;
+    }
+
+    #adm-operators-tbody td {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 4px 0;
+        border: none;
+        font-size: 12px;
+    }
+
+    #adm-operators-tbody td:last-child {
+        margin-top: 8px;
+        gap: 6px;
+        width: 100%;
+    }
+
+    #adm-operators-tbody td:last-child button {
+        flex: 1;
+    }
+
+    /* Prevent mobile browser zoom on inputs */
+    input[type="text"],
+    input[type="email"],
+    input[type="password"],
+    input[type="number"],
+    input[type="search"],
+    select,
+    textarea {
+        font-size: 16px !important;
     }
 }
+
 
 /* =========================================================
    8. ABOUT DEVELOPER SECTION & MODAL STYLES

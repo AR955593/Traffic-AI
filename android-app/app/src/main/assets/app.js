@@ -836,10 +836,92 @@ function initPasswordToggles() {
     });
 }
 
+function updateMobileBottomNavForRole(role) {
+    const navContainer = document.getElementById('mobile-bottom-nav');
+    if (!navContainer) return;
+
+    const currentRole = (role || 'USER').toUpperCase();
+    let navItems = [];
+
+    if (currentRole === 'ADMIN' || currentRole === 'SUPER_ADMIN') {
+        navItems = [
+            { label: 'Dashboard', icon: 'fa-solid fa-building-shield', view: 'administration' },
+            { label: 'Operators', icon: 'fa-solid fa-users-gear', view: 'administration', scroll: '#adm-operators-table' },
+            { label: 'System', icon: 'fa-solid fa-server', view: 'administration', scroll: '#adm-health-services-list' },
+            { label: 'Alerts', icon: 'fa-solid fa-bell', action: 'notifications' },
+            { label: 'Profile', icon: 'fa-solid fa-user', view: 'settings' }
+        ];
+    } else if (currentRole === 'TRAFFIC_OPERATOR' || currentRole === 'OPERATOR') {
+        navItems = [
+            { label: 'Operations', icon: 'fa-solid fa-tower-observation', view: 'operator-dashboard' },
+            { label: 'Map', icon: 'fa-solid fa-map-location-dot', view: 'live-operations' },
+            { label: 'Incidents', icon: 'fa-solid fa-triangle-exclamation', view: 'incidents' },
+            { label: 'Alerts', icon: 'fa-solid fa-bell', action: 'notifications' },
+            { label: 'Profile', icon: 'fa-solid fa-user', view: 'settings' }
+        ];
+    } else {
+        // Commuter / USER
+        navItems = [
+            { label: 'Home', icon: 'fa-solid fa-house', view: 'home-dashboard' },
+            { label: 'Routes', icon: 'fa-solid fa-route', view: 'route-planner' },
+            { label: 'Traffic', icon: 'fa-solid fa-map-location-dot', view: 'live-operations' },
+            { label: 'Alerts', icon: 'fa-solid fa-bell', action: 'notifications' },
+            { label: 'Profile', icon: 'fa-solid fa-user', view: 'settings' }
+        ];
+    }
+
+    navContainer.innerHTML = navItems.map(item => {
+        const activeClass = state.currentView === item.view ? 'active' : '';
+        const actionAttr = item.action ? `data-action="${item.action}"` : '';
+        const viewAttr = item.view ? `data-view="${item.view}"` : '';
+        const scrollAttr = item.scroll ? `data-scroll="${item.scroll}"` : '';
+
+        return `
+            <button class="mobile-nav-btn ${activeClass}" ${viewAttr} ${actionAttr} ${scrollAttr}>
+                <i class="${item.icon}"></i>
+                <span>${item.label}</span>
+            </button>
+        `;
+    }).join('');
+
+    navContainer.querySelectorAll('.mobile-nav-btn').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+            e.preventDefault();
+            const action = btn.dataset.action;
+            const view = btn.dataset.view;
+            const scrollTarget = btn.dataset.scroll;
+
+            if (action === 'notifications') {
+                if (window.NotificationController && typeof window.NotificationController.openModal === 'function') {
+                    window.NotificationController.openModal();
+                }
+                return;
+            }
+
+            if (view) {
+                if (view === 'route-planner') {
+                    switchView('live-operations');
+                    const floatingCard = document.getElementById('floating-route-card');
+                    const overlay = document.getElementById('route-planner-overlay');
+                    floatingCard?.classList.add('active');
+                    overlay?.classList.add('active');
+                } else {
+                    switchView(view);
+                    if (scrollTarget) {
+                        setTimeout(() => {
+                            const el = document.querySelector(scrollTarget);
+                            if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                        }, 150);
+                    }
+                }
+            }
+        });
+    });
+}
+
 function initNavigation() {
     const desktopNavButtons = document.querySelectorAll('.sidebar-nav .nav-item');
     const sidebarBottomNavButtons = document.querySelectorAll('.sidebar-bottom-actions .nav-item[data-view]');
-    const mobileNavButtons = document.querySelectorAll('.mobile-bottom-nav .mobile-nav-btn');
 
     function handleNavClick(btn) {
         const view = btn.dataset.view;
@@ -858,20 +940,8 @@ function initNavigation() {
     desktopNavButtons.forEach(btn => btn.addEventListener('click', () => handleNavClick(btn)));
     sidebarBottomNavButtons.forEach(btn => btn.addEventListener('click', () => handleNavClick(btn)));
 
-    mobileNavButtons.forEach(btn => {
-        btn.addEventListener('click', () => {
-            const view = btn.dataset.view;
-            if (view === 'route-planner') {
-                switchView('live-operations');
-                const floatingCard = document.getElementById('floating-route-card');
-                const overlay = document.getElementById('route-planner-overlay');
-                floatingCard?.classList.add('active');
-                overlay?.classList.add('active');
-            } else {
-                switchView(view);
-            }
-        });
-    });
+    // Initial mobile nav rendering
+    updateMobileBottomNavForRole(state.currentUser ? state.currentUser.role : 'USER');
 
     // Handle generic data-view triggers across the DOM
     document.querySelectorAll('[data-view]').forEach(elem => {
@@ -977,12 +1047,12 @@ function switchView(viewName) {
 
     // Strict Role-Based View Access Control & Route Guarding
     if (userRole === 'ADMIN' || userRole === 'SUPER_ADMIN') {
-        const adminAllowedViews = ['administration', 'settings', 'profile', 'notifications', 'about-developer', 'privacy'];
+        const adminAllowedViews = ['administration', 'settings', 'profile', 'notifications', 'about-developer', 'privacy', 'help-center'];
         if (!adminAllowedViews.includes(viewName)) {
             viewName = 'administration';
         }
     } else if (userRole === 'TRAFFIC_OPERATOR' || userRole === 'OPERATOR') {
-        const operatorAllowedViews = ['operator-dashboard', 'live-operations', 'signals', 'emergency-corridor', 'cctv', 'analytics', 'settings', 'profile', 'notifications', 'about-developer', 'privacy'];
+        const operatorAllowedViews = ['operator-dashboard', 'live-operations', 'signals', 'emergency-corridor', 'cctv', 'analytics', 'settings', 'profile', 'notifications', 'about-developer', 'privacy', 'help-center'];
         if (!operatorAllowedViews.includes(viewName)) {
             showToast('Access Denied: Commuter/Admin view restricted.', 'error');
             viewName = 'operator-dashboard';
@@ -2274,15 +2344,20 @@ const NotificationController = {
     getIconAndClass(type, severity) {
         const sev = (severity || 'info').toLowerCase();
         let iconClass = 'fa-bell';
-        if (type === 'traffic') iconClass = 'fa-car-burst';
-        else if (type === 'incident') iconClass = 'fa-triangle-exclamation';
-        else if (type === 'road_closure') iconClass = 'fa-road-barrier';
-        else if (type === 'route_alert') iconClass = 'fa-route';
-        else if (type === 'weather') iconClass = 'fa-cloud-showers-heavy';
-        else if (type === 'security') iconClass = 'fa-shield-halved';
+        const notifType = (type || '').toLowerCase();
         
+        if (notifType.includes('traffic') || notifType.includes('alert')) iconClass = 'fa-triangle-exclamation';
+        else if (notifType.includes('incident') || notifType.includes('accident')) iconClass = 'fa-car-burst';
+        else if (notifType.includes('closure') || notifType.includes('road_closed')) iconClass = 'fa-road-barrier';
+        else if (notifType.includes('route') || notifType.includes('congestion')) iconClass = 'fa-route';
+        else if (notifType.includes('weather') || notifType.includes('rain')) iconClass = 'fa-cloud-showers-heavy';
+        else if (notifType.includes('operator') || notifType.includes('security') || notifType.includes('admin')) iconClass = 'fa-shield-halved';
+        else if (notifType.includes('support') || notifType.includes('ticket')) iconClass = 'fa-headset';
+        else if (notifType.includes('system') || notifType.includes('public')) iconClass = 'fa-bullhorn';
+
         return { iconClass, sevClass: sev };
     },
+
 
     updateUnreadBadge(count) {
         this.unreadCount = typeof count === 'number' ? count : 0;
@@ -2545,13 +2620,50 @@ const NotificationController = {
                 </div>
             `;
 
-            if (isUnread) {
-                card.addEventListener('click', (e) => {
-                    if (!e.target.closest('.delete-btn')) {
+            card.addEventListener('click', (e) => {
+                if (!e.target.closest('.delete-btn') && !e.target.closest('.mark-read-btn')) {
+                    if (isUnread) {
                         this.markAsRead(id);
                     }
-                });
-            }
+                    const modalNotif = document.getElementById('modal-notifications');
+                    const userRole = state.currentUser ? (state.currentUser.role || 'USER').toUpperCase() : 'USER';
+                    const nType = (notif.type || '').toUpperCase();
+                    const rType = (notif.related_entity_type || '').toUpperCase();
+
+                    if (rType === 'SUPPORT_TICKET' || nType === 'SUPPORT_UPDATE') {
+                        if (modalNotif) modalNotif.classList.remove('active');
+                        if (window.TrafficAISetScrollLock) window.TrafficAISetScrollLock(false);
+                        switchView('help-center');
+                        if (notif.related_entity_id && window.HelpCenterController) {
+                            window.HelpCenterController.openTicketDetail(notif.related_entity_id);
+                        }
+                    } else if (nType.includes('INCIDENT') || rType === 'INCIDENT') {
+                        if (modalNotif) modalNotif.classList.remove('active');
+                        if (window.TrafficAISetScrollLock) window.TrafficAISetScrollLock(false);
+                        if (userRole === 'TRAFFIC_OPERATOR') {
+                            switchView('operator-dashboard');
+                        } else {
+                            switchView('live-operations');
+                        }
+                    } else if (nType.includes('OPERATOR') || nType.includes('STATUS')) {
+                        if (modalNotif) modalNotif.classList.remove('active');
+                        if (window.TrafficAISetScrollLock) window.TrafficAISetScrollLock(false);
+                        if (userRole === 'TRAFFIC_OPERATOR') {
+                            switchView('operator-dashboard');
+                        } else if (userRole === 'ADMIN') {
+                            switchView('administration');
+                        }
+                    } else if (nType.includes('TRAFFIC') || nType.includes('CONGESTION') || nType.includes('WEATHER') || nType.includes('ALERT') || nType.includes('ROAD')) {
+                        if (modalNotif) modalNotif.classList.remove('active');
+                        if (window.TrafficAISetScrollLock) window.TrafficAISetScrollLock(false);
+                        switchView('live-operations');
+                    } else if (nType.includes('PUBLIC') || nType.includes('SYSTEM')) {
+                        if (modalNotif) modalNotif.classList.remove('active');
+                        if (window.TrafficAISetScrollLock) window.TrafficAISetScrollLock(false);
+                    }
+                }
+            });
+
 
             const deleteBtn = card.querySelector('.delete-btn');
             if (deleteBtn) {
@@ -2569,9 +2681,287 @@ const NotificationController = {
     }
 };
 
+const HelpCenterController = {
+    tickets: [],
+    activeTicketId: null,
+
+    async fetchKnowledgeBase(query = '') {
+        try {
+            const res = await fetch(`${API_BASE}/api/v1/support/knowledge-base?query=${encodeURIComponent(query)}`);
+            if (res.ok) {
+                const data = await res.json();
+                this.renderKnowledgeBaseResults(data.articles || []);
+            }
+        } catch (err) {
+            console.error('[HelpCenter] KB fetch error:', err);
+        }
+    },
+
+    renderKnowledgeBaseResults(articles) {
+        const container = document.getElementById('kb-search-results');
+        if (!container) return;
+        if (!articles || articles.length === 0) {
+            container.innerHTML = `<div style="grid-column:1/-1;padding:16px;color:var(--text-muted);font-size:13px;">No matching articles found. You can submit a support ticket below.</div>`;
+            return;
+        }
+
+        container.innerHTML = articles.map(a => `
+            <div class="glass-card" style="padding:14px;border:1px solid rgba(255,255,255,0.08);background:rgba(15,23,42,0.6);">
+                <div style="font-weight:600;font-size:14px;color:var(--accent-mint);margin-bottom:6px;"><i class="fa-solid fa-book-bookmark"></i> ${a.title}</div>
+                <div style="font-size:12px;color:var(--text-main);margin-bottom:8px;line-height:1.4;">${a.verified_solution}</div>
+                <div style="font-size:11px;color:var(--text-muted);"><i class="fa-solid fa-tag"></i> Category: ${a.category}</div>
+            </div>
+        `).join('');
+    },
+
+    async fetchSupportTickets() {
+        const token = state.token || localStorage.getItem('token');
+        if (!token) return;
+
+        try {
+            const res = await fetch(`${API_BASE}/api/v1/support/tickets`, {
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
+            if (res.ok) {
+                const data = await res.json();
+                this.tickets = data.tickets || [];
+                this.renderSupportTicketsList();
+            }
+        } catch (err) {
+            console.error('[HelpCenter] Tickets fetch error:', err);
+        }
+    },
+
+    renderSupportTicketsList() {
+        const container = document.getElementById('support-tickets-list-container');
+        if (!container) return;
+
+        if (!this.tickets || this.tickets.length === 0) {
+            container.innerHTML = `
+                <div class="empty-state-card text-center" style="padding:40px;">
+                    <i class="fa-solid fa-headset fa-3x text-muted" style="margin-bottom:12px;"></i>
+                    <p style="color:var(--text-muted);">No support requests submitted yet.</p>
+                </div>
+            `;
+            return;
+        }
+
+        container.innerHTML = this.tickets.map(t => {
+            const statusClass = t.status === 'RESOLVED' ? 'badge-mint' : (t.status === 'IN_PROGRESS' || t.status === 'WAITING_FOR_USER' ? 'badge-amber' : 'badge-peach');
+            const statusLabel = (t.status || 'OPEN').replace(/_/g, ' ');
+            const dateStr = new Date(t.created_at).toLocaleString();
+
+            return `
+                <div class="ticket-card glass-card" data-ticket-id="${t.ticket_id}" style="padding:16px;margin-bottom:12px;cursor:pointer;display:flex;justify-content:space-between;align-items:center;border:1px solid rgba(255,255,255,0.08);transition:all 0.2s ease;">
+                    <div>
+                        <div style="display:flex;align-items:center;gap:10px;margin-bottom:4px;">
+                            <strong style="font-size:15px;color:#fff;">#${t.ticket_id}</strong>
+                            <span class="badge-status ${statusClass}">${statusLabel}</span>
+                            <span style="font-size:11px;color:var(--text-muted);"><i class="fa-solid fa-tag"></i> ${t.category}</span>
+                        </div>
+                        <h4 style="margin:0 0 4px 0;font-size:14px;color:var(--text-main);">${t.subject}</h4>
+                        <div style="font-size:12px;color:var(--text-muted);">${t.description ? t.description.substring(0, 90) + '...' : ''}</div>
+                    </div>
+                    <div style="text-align:right;">
+                        <span style="font-size:11px;color:var(--text-muted);display:block;margin-bottom:6px;">${dateStr}</span>
+                        <button class="btn btn-outline btn-sm" onclick="HelpCenterController.openTicketDetail('${t.ticket_id}')"><i class="fa-solid fa-eye"></i> View</button>
+                    </div>
+                </div>
+            `;
+        }).join('');
+
+        container.querySelectorAll('.ticket-card').forEach(card => {
+            const tid = card.getAttribute('data-ticket-id');
+            card.addEventListener('click', (e) => {
+                if (!e.target.closest('button')) {
+                    this.openTicketDetail(tid);
+                }
+            });
+        });
+    },
+
+    async openTicketDetail(ticketId) {
+        const token = state.token || localStorage.getItem('token');
+        if (!token || !ticketId) return;
+
+        try {
+            const res = await fetch(`${API_BASE}/api/v1/support/tickets/${ticketId}`, {
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
+            if (res.ok) {
+                const data = await res.json();
+                const ticket = data.ticket;
+                this.activeTicketId = ticket.ticket_id;
+
+                const modal = document.getElementById('modal-ticket-detail');
+                const titleEl = document.getElementById('ticket-detail-id-subject');
+                const statusEl = document.getElementById('ticket-detail-status-pill');
+                const kbBox = document.getElementById('ticket-verified-solution-box');
+                const kbText = document.getElementById('ticket-verified-solution-text');
+                const threadEl = document.getElementById('ticket-messages-thread');
+
+                if (titleEl) titleEl.innerHTML = `<i class="fa-solid fa-ticket text-amber"></i> #${ticket.ticket_id} - ${ticket.subject}`;
+                if (statusEl) {
+                    statusEl.textContent = (ticket.status || 'OPEN').replace(/_/g, ' ');
+                    statusEl.className = `badge-status ${ticket.status === 'RESOLVED' ? 'badge-mint' : 'badge-amber'}`;
+                }
+
+                if (ticket.resolution && kbBox && kbText) {
+                    kbBox.style.display = 'block';
+                    kbText.textContent = ticket.resolution;
+                } else if (kbBox) {
+                    kbBox.style.display = 'none';
+                }
+
+                if (threadEl) {
+                    threadEl.innerHTML = (ticket.messages || []).map(m => {
+                        const isUser = m.sender_role === 'USER';
+                        const isSystem = m.sender_role === 'SYSTEM';
+                        const bg = isUser ? 'rgba(59,130,246,0.15)' : (isSystem ? 'rgba(16,185,129,0.15)' : 'rgba(245,158,11,0.15)');
+                        const align = isUser ? 'flex-end' : 'flex-start';
+                        const time = new Date(m.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+
+                        return `
+                            <div style="align-self:${align};max-width:85%;background:${bg};padding:12px 14px;border-radius:10px;border:1px solid rgba(255,255,255,0.06);">
+                                <div style="display:flex;justify-content:space-between;gap:12px;margin-bottom:4px;font-size:11px;color:var(--text-muted);">
+                                    <strong><i class="fa-solid ${isUser ? 'fa-user' : (isSystem ? 'fa-robot' : 'fa-headset')}"></i> ${m.sender_name || m.sender_role}</strong>
+                                    <span>${time}</span>
+                                </div>
+                                <div style="font-size:13px;color:var(--text-main);white-space:pre-wrap;line-height:1.4;">${m.message}</div>
+                            </div>
+                        `;
+                    }).join('');
+                }
+
+                if (modal) {
+                    modal.classList.add('active');
+                    if (window.TrafficAISetScrollLock) window.TrafficAISetScrollLock(true);
+                }
+            }
+        } catch (err) {
+            console.error('[HelpCenter] Open ticket detail error:', err);
+        }
+    },
+
+    async submitTicketReply() {
+        const token = state.token || localStorage.getItem('token');
+        const input = document.getElementById('ticket-reply-input');
+        if (!token || !this.activeTicketId || !input || !input.value.trim()) return;
+
+        const message = input.value.trim();
+        try {
+            const res = await fetch(`${API_BASE}/api/v1/support/tickets/${this.activeTicketId}/reply`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`
+                },
+                body: JSON.stringify({ message: message })
+            });
+            if (res.ok) {
+                input.value = '';
+                this.openTicketDetail(this.activeTicketId);
+                this.fetchSupportTickets();
+                if (typeof showToast === 'function') showToast('Reply sent successfully.', 'success');
+            }
+        } catch (err) {
+            console.error('[HelpCenter] Send reply error:', err);
+        }
+    },
+
+    async createTicket() {
+        const token = state.token || localStorage.getItem('token');
+        if (!token) return;
+
+        const category = document.getElementById('problem-category-select')?.value;
+        const subject = document.getElementById('problem-subject-input')?.value;
+        const description = document.getElementById('problem-desc-input')?.value;
+        const relatedFeature = document.getElementById('problem-feature-select')?.value;
+        const priority = document.getElementById('problem-priority-select')?.value || 'NORMAL';
+
+        if (!category) {
+            if (typeof showToast === 'function') showToast('Please select a problem category.', 'error');
+            return;
+        }
+        if (!subject || !subject.trim()) {
+            if (typeof showToast === 'function') showToast('Please enter a problem subject title.', 'error');
+            return;
+        }
+        if (!description || !description.trim()) {
+            if (typeof showToast === 'function') showToast('Please describe your problem.', 'error');
+            return;
+        }
+
+        try {
+            const res = await fetch(`${API_BASE}/api/v1/support/tickets`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`
+                },
+                body: JSON.stringify({
+                    category: category,
+                    subject: subject.trim(),
+                    description: description.trim(),
+                    priority: priority,
+                    related_feature: relatedFeature
+                })
+            });
+
+            if (res.ok) {
+                const data = await res.json();
+                const modal = document.getElementById('modal-report-problem');
+                if (modal) modal.classList.remove('active');
+                if (window.TrafficAISetScrollLock) window.TrafficAISetScrollLock(false);
+
+                document.getElementById('problem-subject-input').value = '';
+                document.getElementById('problem-desc-input').value = '';
+
+                if (typeof showToast === 'function') showToast(`Support Ticket #${data.ticket.ticket_id} created successfully!`, 'success');
+
+                this.fetchSupportTickets();
+                this.openTicketDetail(data.ticket.ticket_id);
+            } else {
+                if (typeof showToast === 'function') showToast('Failed to submit support ticket.', 'error');
+            }
+        } catch (err) {
+            console.error('[HelpCenter] Create ticket error:', err);
+        }
+    },
+
+    async closeOwnTicket() {
+        const token = state.token || localStorage.getItem('token');
+        if (!token || !this.activeTicketId) return;
+
+        try {
+            const res = await fetch(`${API_BASE}/api/v1/support/tickets/${this.activeTicketId}/status`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`
+                },
+                body: JSON.stringify({ status: 'RESOLVED', resolution: 'Resolved by commuter.' })
+            });
+            if (res.ok) {
+                const modal = document.getElementById('modal-ticket-detail');
+                if (modal) modal.classList.remove('active');
+                if (window.TrafficAISetScrollLock) window.TrafficAISetScrollLock(false);
+                this.fetchSupportTickets();
+                if (typeof showToast === 'function') showToast('Ticket marked as resolved.', 'success');
+            }
+        } catch (err) {
+            console.error('[HelpCenter] Close ticket error:', err);
+        }
+    }
+};
+
+window.HelpCenterController = HelpCenterController;
+
 function initWebSocket() {
     try {
-        trafficSocket = new WebSocket(`${WS_BASE}/api/v1/ws/traffic`);
+        const token = state.token || localStorage.getItem('token');
+        const wsUrl = token ? `${WS_BASE}/api/v1/ws/traffic?token=${encodeURIComponent(token)}` : `${WS_BASE}/api/v1/ws/traffic`;
+        trafficSocket = new WebSocket(wsUrl);
 
         trafficSocket.onopen = () => {
             const statusText = document.getElementById('ws-status-text');
@@ -2579,7 +2969,6 @@ function initWebSocket() {
             const dot = document.querySelector('.connection-status .status-dot');
             if (dot) dot.className = 'status-dot green';
 
-            // Resync notifications on WebSocket connection/reconnection
             NotificationController.fetchNotifications();
             NotificationController.fetchUnreadCount();
         };
@@ -2589,6 +2978,8 @@ function initWebSocket() {
                 const data = JSON.parse(event.data);
                 if (data.type === 'notification.created' || data.event === 'notification.created' || data.notification) {
                     NotificationController.handleIncomingNotification(data.notification || data);
+                } else if (data.event === 'support.ticket.updated' || data.event === 'support.message.created') {
+                    if (window.HelpCenterController) HelpCenterController.fetchSupportTickets();
                 } else {
                     handleLiveTrafficTick(data);
                 }
@@ -4180,6 +4571,9 @@ function updateHeaderUserDisplay() {
         document.querySelectorAll('.admin-nav-item').forEach(el => el.style.display = 'none');
         if (kpiBar) kpiBar.style.display = 'flex';
     }
+
+    // Update Role-Isolated Mobile Navigation
+    updateMobileBottomNavForRole(role);
 }
 
 async function loadUserProfileData() {
@@ -5427,6 +5821,65 @@ document.addEventListener('DOMContentLoaded', () => {
     });
     document.getElementById('btn-close-share-route')?.addEventListener('click', () => {
         document.getElementById('modal-share-route')?.classList.remove('active');
+    });
+
+    // Help Center Events
+    document.getElementById('btn-open-report-problem')?.addEventListener('click', () => {
+        const modal = document.getElementById('modal-report-problem');
+        if (modal) modal.classList.add('active');
+        if (window.TrafficAISetScrollLock) window.TrafficAISetScrollLock(true);
+    });
+
+    document.getElementById('btn-close-report-problem')?.addEventListener('click', () => {
+        const modal = document.getElementById('modal-report-problem');
+        if (modal) modal.classList.remove('active');
+        if (window.TrafficAISetScrollLock) window.TrafficAISetScrollLock(false);
+    });
+
+    document.getElementById('btn-cancel-report-problem')?.addEventListener('click', () => {
+        const modal = document.getElementById('modal-report-problem');
+        if (modal) modal.classList.remove('active');
+        if (window.TrafficAISetScrollLock) window.TrafficAISetScrollLock(false);
+    });
+
+    document.getElementById('btn-submit-support-request')?.addEventListener('click', () => {
+        HelpCenterController.createTicket();
+    });
+
+    document.getElementById('btn-search-kb')?.addEventListener('click', () => {
+        const q = document.getElementById('kb-search-input')?.value || '';
+        HelpCenterController.fetchKnowledgeBase(q);
+    });
+
+    document.getElementById('kb-search-input')?.addEventListener('keyup', (e) => {
+        if (e.key === 'Enter') {
+            const q = e.target.value || '';
+            HelpCenterController.fetchKnowledgeBase(q);
+        }
+    });
+
+    document.getElementById('btn-refresh-tickets')?.addEventListener('click', () => {
+        HelpCenterController.fetchSupportTickets();
+    });
+
+    document.getElementById('btn-close-ticket-detail')?.addEventListener('click', () => {
+        const modal = document.getElementById('modal-ticket-detail');
+        if (modal) modal.classList.remove('active');
+        if (window.TrafficAISetScrollLock) window.TrafficAISetScrollLock(false);
+    });
+
+    document.getElementById('btn-send-ticket-reply')?.addEventListener('click', () => {
+        HelpCenterController.submitTicketReply();
+    });
+
+    document.getElementById('ticket-reply-input')?.addEventListener('keyup', (e) => {
+        if (e.key === 'Enter') {
+            HelpCenterController.submitTicketReply();
+        }
+    });
+
+    document.getElementById('btn-close-own-ticket')?.addEventListener('click', () => {
+        HelpCenterController.closeOwnTicket();
     });
 });
 

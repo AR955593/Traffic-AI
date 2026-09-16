@@ -31,6 +31,7 @@ from analytics import AnalyticsEngine
 from api_connectors import TomTomSearchConnector, TomTomRoutingConnector, OpenWeatherConnector
 from user_service import UserService
 from ai_assistant import AITrafficAssistant
+from help_center import help_center_manager
 from db import get_db_connection
 from mongo_db import get_mongo_health, get_mongo_db
 from pymongo.errors import PyMongoError, ServerSelectionTimeoutError
@@ -127,6 +128,28 @@ class UpdateIncidentStatusRequest(BaseModel):
 
 class SwitchUserRequest(BaseModel):
     user_id: str = Field(..., example="usr_operator")
+
+class CreateSupportTicketRequest(BaseModel):
+    category: str
+    subject: str
+    description: str
+    priority: Optional[str] = "NORMAL"
+    related_feature: Optional[str] = None
+    device_info: Optional[str] = None
+    attachment_url: Optional[str] = None
+
+class ReplySupportTicketRequest(BaseModel):
+    message: str
+    attachment_url: Optional[str] = None
+
+class UpdateSupportTicketStatusRequest(BaseModel):
+    status: str
+    resolution: Optional[str] = None
+
+class PublicNoticeRequest(BaseModel):
+    title: str
+    message: str
+    severity: Optional[str] = "MEDIUM"
 
 # Auth Schemas
 class RegisterRequest(BaseModel):
@@ -640,6 +663,193 @@ def delete_notification(notification_id: str, user: dict = Depends(get_current_u
     success = user_service.delete_notification(user["id"], notification_id)
     unread_count = user_service.get_unread_count(user["id"])
     return {"status": "success", "deleted": success, "unread_count": unread_count}
+
+# -------------------------------------------------------------
+# HELP CENTER & SUPPORT TICKET ENDPOINTS
+# -------------------------------------------------------------
+@app.get("/api/v1/support/knowledge-base")
+def get_knowledge_base(
+    category: Optional[str] = Query(default=None),
+    query: Optional[str] = Query(default=None)
+):
+    articles = help_center_manager.get_knowledge_base(category=category, query=query)
+    return {"status": "success", "articles": articles}
+
+@app.post("/api/v1/support/tickets")
+def create_support_ticket(
+    req: CreateSupportTicketRequest,
+    user: dict = Depends(get_current_user_from_header)
+):
+    ticket = help_center_manager.create_support_ticket(
+        user_id=user["id"],
+        user_name=user.get("name") or user.get("email", "").split("@")[0],
+        user_email=user.get("email", ""),
+        category=req.category,
+        subject=req.subject,
+        description=req.description,
+        priority=req.priority or "NORMAL",
+        related_feature=req.related_feature,
+        device_info=req.device_info,
+        attachment_url=req.attachment_url
+    )
+    auth_manager.audit_logger.log(
+        user_id=user["id"],
+        action="support.ticket.created",
+        target_type="support_ticket",
+        target_id=ticket["ticket_id"],
+        metadata={"category": req.category, "subject": req.subject}
+    )
+    return {"status": "success", "ticket": ticket}
+
+@app.get("/api/v1/support/tickets")
+def get_support_tickets(
+    limit: int = Query(default=50, ge=1, le=200),
+    user: dict = Depends(get_current_user_from_header)
+):
+    role = (user.get("role") or "").upper()
+    if role in ["ADMIN", "SUPER_ADMIN", "TRAFFIC_OPERATOR", "OPERATOR"]:
+        tickets = help_center_manager.get_assigned_tickets(user["id"], role=role, limit=limit)
+    else:
+        tickets = help_center_manager.get_user_tickets(user["id"], limit=limit)
+    return {"status": "success", "tickets": tickets}
+
+@app.get("/api/v1/support/tickets/{ticket_id}")
+def get_support_ticket_detail(
+    ticket_id: str,
+    user: dict = Depends(get_current_user_from_header)
+):
+    role = (user.get("role") or "").upper()
+    ticket = help_center_manager.get_ticket_by_id(ticket_id, acting_user_id=user["id"], acting_role=role)
+    if not ticket:
+        raise HTTPException(status_code=403 if role not in ["ADMIN", "SUPER_ADMIN"] else 404, detail="Ticket not found or access denied.")
+    return {"status": "success", "ticket": ticket}
+
+@app.post("/api/v1/support/tickets/{ticket_id}/reply")
+def reply_support_ticket(
+    ticket_id: str,
+    req: ReplySupportTicketRequest,
+    user: dict = Depends(get_current_user_from_header)
+):
+    role = (user.get("role") or "").upper()
+    user_name = user.get("name") or user.get("email", "").split("@")[0]
+    updated_ticket = help_center_manager.add_ticket_reply(
+        ticket_id=ticket_id,
+        sender_id=user["id"],
+        sender_name=user_name,
+        sender_role=role,
+        message=req.message,
+        attachment_url=req.attachment_url
+    )
+    if not updated_ticket:
+        raise HTTPException(status_code=403, detail="Ticket reply failed or access denied.")
+
+    # If support/operator/admin replied, create notification for user!
+    if role in ["TRAFFIC_OPERATOR", "OPERATOR", "ADMIN", "SUPER_ADMIN"]:
+        target_user_id = updated_ticket["user_id"]
+        dk = f"sup_reply_{ticket_id}_{len(updated_ticket.get('messages', []))}"
+        notif = user_service.create_user_notification(
+            user_id=target_user_id,
+            notif_type="SUPPORT_UPDATE",
+            title=f"Support Request Updated ({ticket_id})",
+            message=f"TrafficAI Support responded to your request: '{req.message[:70]}...'",
+            severity="MEDIUM",
+            source_role=role,
+            source_user_id=user["id"],
+            related_entity_type="SUPPORT_TICKET",
+            related_entity_id=ticket_id,
+            dedupe_key=dk
+        )
+        print("\n[DEBUG REPLY NOTIF]:", notif, "TARGET USER:", target_user_id, "DK:", dk)
+        if notif:
+            try:
+                loop = asyncio.get_event_loop()
+                if loop.is_running():
+                    loop.create_task(ws_manager.send_to_user(target_user_id, {
+                        "event": "notification.created",
+                        "notification": notif
+                    }))
+                else:
+                    asyncio.run(ws_manager.send_to_user(target_user_id, {
+                        "event": "notification.created",
+                        "notification": notif
+                    }))
+            except Exception:
+                pass
+
+    auth_manager.audit_logger.log(
+        user_id=user["id"],
+        action="support.message.created",
+        target_type="support_ticket",
+        target_id=ticket_id
+    )
+
+    return {"status": "success", "ticket": updated_ticket}
+
+@app.post("/api/v1/support/tickets/{ticket_id}/status")
+def update_support_ticket_status(
+    ticket_id: str,
+    req: UpdateSupportTicketStatusRequest,
+    user: dict = Depends(get_current_user_from_header)
+):
+    role = (user.get("role") or "").upper()
+    updated_ticket = help_center_manager.update_ticket_status(
+        ticket_id=ticket_id,
+        acting_user_id=user["id"],
+        acting_role=role,
+        new_status=req.status,
+        resolution=req.resolution
+    )
+    if not updated_ticket:
+        raise HTTPException(status_code=403, detail="Ticket status update failed or access denied.")
+
+    if role in ["TRAFFIC_OPERATOR", "OPERATOR", "ADMIN", "SUPER_ADMIN"]:
+        target_user_id = updated_ticket["user_id"]
+        user_service.create_user_notification(
+            user_id=target_user_id,
+            notif_type="SUPPORT_UPDATE",
+            title=f"Support Request {req.status.replace('_', ' ').title()} ({ticket_id})",
+            message=f"Status updated to {req.status}. {req.resolution or ''}",
+            severity="HIGH" if req.status == "RESOLVED" else "MEDIUM",
+            source_role=role,
+            source_user_id=user["id"],
+            related_entity_type="SUPPORT_TICKET",
+            related_entity_id=ticket_id,
+            dedupe_key=f"sup_status_{ticket_id}_{req.status}"
+        )
+
+    auth_manager.audit_logger.log(
+        user_id=user["id"],
+        action="support.ticket.updated",
+        target_type="support_ticket",
+        target_id=ticket_id,
+        metadata={"new_status": req.status}
+    )
+
+    return {"status": "success", "ticket": updated_ticket}
+
+@app.post("/api/v1/admin/public-notice")
+def send_public_system_notice(
+    req: PublicNoticeRequest,
+    user: dict = Depends(require_admin_user)
+):
+    created = user_service.create_role_notification(
+        target_role="USER",
+        notif_type="PUBLIC_SYSTEM_NOTIFICATION",
+        title=req.title,
+        message=req.message,
+        severity=req.severity or "MEDIUM",
+        source_role="ADMIN",
+        source_user_id=user["id"],
+        dedupe_key=f"admin_pub_{uuid.uuid4().hex[:8]}"
+    )
+    auth_manager.audit_logger.log(
+        user_id=user["id"],
+        action="admin.public_announcement",
+        target_type="system_notice",
+        target_id="public",
+        metadata={"title": req.title, "recipient_count": len(created)}
+    )
+    return {"status": "success", "recipients_notified": len(created)}
 
 # -------------------------------------------------------------
 # REAL-TIME TRAFFIC & FLOW
@@ -1705,16 +1915,87 @@ def get_audit_logs(user: dict = Depends(verify_admin_access), limit: int = 50):
 # -------------------------------------------------------------
 # WEBSOCKET REAL-TIME TRAFFIC BROADCAST
 # -------------------------------------------------------------
+# -------------------------------------------------------------
+# WEBSOCKET REAL-TIME TRAFFIC BROADCAST
+# -------------------------------------------------------------
+class ConnectionManager:
+    def __init__(self):
+        self.user_connections: Dict[str, List[WebSocket]] = {}
+        self.role_connections: Dict[str, List[WebSocket]] = {"USER": [], "TRAFFIC_OPERATOR": [], "ADMIN": []}
+        self.all_connections: List[WebSocket] = []
+
+    async def connect(self, websocket: WebSocket, user_id: Optional[str] = None, role: str = "USER"):
+        await websocket.accept()
+        self.all_connections.append(websocket)
+        if user_id:
+            if user_id not in self.user_connections:
+                self.user_connections[user_id] = []
+            self.user_connections[user_id].append(websocket)
+        role_upper = (role or "USER").upper()
+        if role_upper not in self.role_connections:
+            self.role_connections[role_upper] = []
+        self.role_connections[role_upper].append(websocket)
+
+    def disconnect(self, websocket: WebSocket, user_id: Optional[str] = None, role: str = "USER"):
+        if websocket in self.all_connections:
+            self.all_connections.remove(websocket)
+        if user_id and user_id in self.user_connections:
+            if websocket in self.user_connections[user_id]:
+                self.user_connections[user_id].remove(websocket)
+            if not self.user_connections[user_id]:
+                del self.user_connections[user_id]
+        role_upper = (role or "USER").upper()
+        if role_upper in self.role_connections and websocket in self.role_connections[role_upper]:
+            self.role_connections[role_upper].remove(websocket)
+
+    async def send_to_user(self, user_id: str, message: dict):
+        if user_id in self.user_connections:
+            for ws in list(self.user_connections[user_id]):
+                try:
+                    await ws.send_json(message)
+                except Exception:
+                    pass
+
+    async def broadcast_to_role(self, role: str, message: dict):
+        role_upper = (role or "USER").upper()
+        if role_upper in self.role_connections:
+            for ws in list(self.role_connections[role_upper]):
+                try:
+                    await ws.send_json(message)
+                except Exception:
+                    pass
+
+    async def broadcast_all(self, message: dict):
+        for ws in list(self.all_connections):
+            try:
+                await ws.send_json(message)
+            except Exception:
+                pass
+
+ws_manager = ConnectionManager()
+active_connections = ws_manager.all_connections
+
 @app.websocket("/api/v1/ws/traffic")
-async def traffic_websocket(websocket: WebSocket):
-    await websocket.accept()
-    active_connections.append(websocket)
+async def traffic_websocket(websocket: WebSocket, token: Optional[str] = Query(default=None)):
+    user_id = None
+    role = "USER"
+    if token:
+        try:
+            payload = decode_access_token(token)
+            if payload:
+                user_id = payload.get("sub") or payload.get("id")
+                role = payload.get("role", "USER")
+        except Exception:
+            pass
+
+    await ws_manager.connect(websocket, user_id=user_id, role=role)
     try:
         while True:
             statuses = provider_manager.get_all_status()
             tomtom_status = next((s for s in statuses if "TomTom" in s["name"]), {})
             
             payload = {
+                "event": "traffic.updated",
                 "status": tomtom_status.get("status", "UNAVAILABLE"),
                 "mode": tomtom_status.get("mode", "UNAVAILABLE"),
                 "status_label": f"🟢 LIVE ({tomtom_status.get('name', 'TomTom')})" if tomtom_status.get("mode") == "LIVE" else "🔴 LIVE TRAFFIC UNAVAILABLE",
@@ -1724,11 +2005,9 @@ async def traffic_websocket(websocket: WebSocket):
             await websocket.send_json(payload)
             await asyncio.sleep(3.0)
     except WebSocketDisconnect:
-        if websocket in active_connections:
-            active_connections.remove(websocket)
+        ws_manager.disconnect(websocket, user_id=user_id, role=role)
     except Exception:
-        if websocket in active_connections:
-            active_connections.remove(websocket)
+        ws_manager.disconnect(websocket, user_id=user_id, role=role)
 
 @app.get("/api/v1/admin/env-check")
 def env_check(user: dict = Depends(verify_admin_access)):
