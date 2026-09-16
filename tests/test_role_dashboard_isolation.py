@@ -165,3 +165,32 @@ def test_admin_to_operator_workflow(setup_users):
     res_react = client.post("/api/v1/admin/reactivate-operator", headers=headers_admin, json={"operator_user_id": op_user["id"]})
     assert res_react.status_code == 200
     assert res_react.json()["user"]["status"] == "APPROVED"
+
+def test_admin_profile_only_allows_password_change(setup_users):
+    """Verify ADMIN is forbidden from updating profile details on PUT /api/v1/user/profile."""
+    headers_admin = setup_users["headers_admin"]
+    res = client.put("/api/v1/user/profile", headers=headers_admin, json={
+        "name": "New Admin Name",
+        "city": "Delhi, India"
+    })
+    assert res.status_code == 403
+    assert "System Administrators cannot modify profile details" in res.json()["detail"]
+
+def test_profile_response_contains_no_secrets(setup_users):
+    """Verify GET /api/v1/user/profile does not leak sensitive credentials or password_hash."""
+    headers_a = setup_users["headers_a"]
+    headers_admin = setup_users["headers_admin"]
+
+    res_a = client.get("/api/v1/user/profile", headers=headers_a)
+    assert res_a.status_code == 200
+    data_a = res_a.json()
+    assert "password_hash" not in data_a
+    assert "password" not in data_a
+    assert "otp" not in data_a
+
+    res_admin = client.get("/api/v1/user/profile", headers=headers_admin)
+    assert res_admin.status_code == 200
+    data_admin = res_admin.json()
+    assert "password_hash" not in data_admin
+    assert "password" not in data_admin
+    assert "otp" not in data_admin

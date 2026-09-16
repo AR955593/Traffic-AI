@@ -1302,6 +1302,15 @@
                                 <span id="adm-weather-status">WEATHER API <b class="text-mint">● CONNECTED</b></span>
                                 <span id="adm-ws-status">WEBSOCKET <b class="text-mint">● CONNECTED</b></span>
                             </div>
+
+                            <!-- ADMIN QUICK ACTIONS BAR -->
+                            <div class="admin-quick-actions" style="display:flex;gap:10px;flex-wrap:wrap;margin-top:4px;">
+                                <button class="btn btn-sm btn-outline" id="btn-qa-op-approvals"><i class="fa-solid fa-user-check text-mint"></i> Operator Approvals</button>
+                                <button class="btn btn-sm btn-outline" id="btn-qa-op-mgmt"><i class="fa-solid fa-users-gear text-teal"></i> Operator Management</button>
+                                <button class="btn btn-sm btn-outline" id="btn-qa-sys-health"><i class="fa-solid fa-server text-peach"></i> System Health</button>
+                                <button class="btn btn-sm btn-outline" id="btn-qa-audit-logs"><i class="fa-solid fa-list-check text-amber"></i> Audit Logs</button>
+                                <button class="btn btn-sm btn-outline" id="btn-qa-sys-notifs"><i class="fa-solid fa-bell text-blue"></i> Notification System</button>
+                            </div>
                         </div>
 
                         <!-- ADMIN KPI METRICS GRID -->
@@ -1339,7 +1348,7 @@
                         </div>
 
                         <!-- OPERATOR MANAGEMENT SECTION -->
-                        <div class="admin-card" style="margin-top:20px;padding:20px;background:var(--bg-card, #1e293b);border-radius:12px;border:1px solid var(--border-color, #334155);">
+                        <div class="admin-card" id="adm-op-section" style="margin-top:20px;padding:20px;background:var(--bg-card, #1e293b);border-radius:12px;border:1px solid var(--border-color, #334155);">
                             <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;flex-wrap:wrap;gap:10px;">
                                 <div>
                                     <h3 style="margin:0;"><i class="fa-solid fa-user-gear text-teal"></i> Operator Management</h3>
@@ -2668,19 +2677,15 @@
                 <!-- Tab 0: Account Overview & Edit -->
                 <div class="prof-tab-content active" id="prof-tab-overview">
                     <div class="prefs-section" style="margin-bottom: 1.25rem;">
-                        <h4 style="margin-bottom:0.75rem;"><i class="fa-solid fa-id-card text-teal"></i> Account Details
-                        </h4>
+                        <h4 style="margin-bottom:0.75rem;"><i class="fa-solid fa-id-card text-teal"></i> Account Details</h4>
                         <div style="display:grid;grid-template-columns:1fr 1fr;gap:0.75rem;font-size:12px;">
                             <div>
                                 <span class="text-dim">Email Address:</span>
-                                <div id="profile-user-email" style="font-weight:600;word-break:break-all;">
-                                    user@traffic.ai</div>
+                                <div id="profile-user-email" style="font-weight:600;word-break:break-all;">user@traffic.ai</div>
                             </div>
                             <div>
-                                <span class="text-dim">Authentication:</span>
-                                <div id="profile-detail-verified"
-                                    style="font-weight:600;color:var(--brand-mint, #8397da);">Enabled ✓</div>
-
+                                <span class="text-dim">Authentication Mode:</span>
+                                <div id="profile-detail-provider" style="font-weight:600;color:var(--brand-mint, #10B981);">Local Encrypted Account</div>
                             </div>
                             <div>
                                 <span class="text-dim">Member Since:</span>
@@ -2688,18 +2693,15 @@
                             </div>
                             <div>
                                 <span class="text-dim">Verification Status:</span>
-                                <div id="profile-detail-verified"
-                                    style="font-weight:600;color:var(--brand-mint, #10B981);">Verified ✓</div>
+                                <div id="profile-detail-verified" style="font-weight:600;color:var(--brand-mint, #10B981);">Verified ✓</div>
                             </div>
                         </div>
                     </div>
 
-                    <hr style="border-color:var(--border-color);margin:1rem 0;">
-
-                    <!-- Edit Profile -->
-                    <div class="prefs-section" style="margin-bottom: 1.25rem;">
-                        <h4 style="margin-bottom:0.75rem;"><i class="fa-solid fa-user-pen text-peach"></i> Edit Profile
-                            Information</h4>
+                    <!-- Edit Profile (USER Commuter Only) -->
+                    <div class="prefs-section" id="section-edit-profile" style="margin-bottom: 1.25rem;">
+                        <hr style="border-color:var(--border-color);margin:1rem 0;">
+                        <h4 style="margin-bottom:0.75rem;"><i class="fa-solid fa-user-pen text-peach"></i> Edit Profile Information</h4>
                         <div class="form-row">
                             <div class="form-group">
                                 <label>Full Name</label>
@@ -2712,33 +2714,56 @@
                         </div>
                         <div class="form-group">
                             <label>Phone Number (Optional)</label>
-                            <input type="text" id="profile-edit-phone" class="custom-input"
-                                placeholder="+91-XXXXXXXXXX">
+                            <input type="text" id="profile-edit-phone" class="custom-input" placeholder="+91-XXXXXXXXXX">
                         </div>
-                        <button class="btn btn-primary btn-sm" id="btn-save-profile-edits"><i
-                                class="fa-solid fa-floppy-disk"></i> Save Profile Changes</button>
+                        <button class="btn btn-primary btn-sm" id="btn-save-profile-edits"><i class="fa-solid fa-floppy-disk"></i> Save Profile Changes</button>
                     </div>
 
                     <hr style="border-color:var(--border-color);margin:1rem 0;">
 
                     <!-- Change Password -->
                     <div class="prefs-section" id="section-change-password">
-                        <h4 style="margin-bottom:0.75rem;"><i class="fa-solid fa-lock text-amber"></i> Change Password
-                        </h4>
+                        <h4 style="margin-bottom:0.75rem;"><i class="fa-solid fa-lock text-amber"></i> Change Password</h4>
                         <div class="form-row">
                             <div class="form-group">
                                 <label>Current Password</label>
-                                <input type="password" id="profile-current-pass" class="custom-input"
-                                    placeholder="Current password">
+                                <input type="password" id="profile-current-pass" class="custom-input" placeholder="Current password">
                             </div>
                             <div class="form-group">
-                                <label>New Password (min 6 chars)</label>
-                                <input type="password" id="profile-new-pass" class="custom-input"
-                                    placeholder="New password">
+                                <label>New Password (8-16 chars, 1 upper, 1 lower, 1 num, 1 spec)</label>
+                                <input type="password" id="profile-new-pass" class="custom-input" placeholder="New password">
                             </div>
                         </div>
-                        <button class="btn btn-outline btn-sm" id="btn-update-password"><i class="fa-solid fa-key"></i>
-                            Update Password</button>
+                        <div class="form-group">
+                            <label>Confirm New Password</label>
+                            <input type="password" id="profile-confirm-pass" class="custom-input" placeholder="Confirm new password">
+                        </div>
+                        <button class="btn btn-outline btn-sm" id="btn-update-password"><i class="fa-solid fa-key"></i> Update Password</button>
+                    </div>
+                </div>
+
+                <!-- Tab 0B: Operational Assignment (TRAFFIC_OPERATOR Only) -->
+                <div class="prof-tab-content" id="prof-tab-assignment">
+                    <div class="prefs-section">
+                        <h4 style="margin-bottom:0.75rem;"><i class="fa-solid fa-tower-broadcast text-peach"></i> Operational Assignment Details</h4>
+                        <div style="display:grid;grid-template-columns:1fr 1fr;gap:0.75rem;font-size:12px;">
+                            <div>
+                                <span class="text-dim">Organization:</span>
+                                <div style="font-weight:600;color:var(--traffic-teal);">Traffic Control Authority (TCA)</div>
+                            </div>
+                            <div>
+                                <span class="text-dim">Assigned City:</span>
+                                <div id="op-assign-city" style="font-weight:600;">Kanpur / UP Central</div>
+                            </div>
+                            <div>
+                                <span class="text-dim">Assigned Zone:</span>
+                                <div id="op-assign-zone" style="font-weight:600;color:var(--brand-mint, #10B981);">Zone 1 - Central Transit Corridor</div>
+                            </div>
+                            <div>
+                                <span class="text-dim">Shift Duty:</span>
+                                <div style="font-weight:600;">Day Shift (08:00 - 16:00 IST)</div>
+                            </div>
+                        </div>
                     </div>
                 </div>
 

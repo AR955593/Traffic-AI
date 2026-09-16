@@ -3223,15 +3223,44 @@ async function fetchAdminData() {
         }
     } catch (e) {}
 
-    // 3. Fetch System Infrastructure Health
+    // 3. Fetch System Infrastructure Health & Update Status Strip
     try {
         const resH = await fetch(`${API_BASE}/api/v1/admin/system-health`, { headers: authHeader });
         if (resH.ok) {
             const data = await resH.json();
+            const services = data.services || [];
+
+            const sys = services.find(s => s.name.includes("FastAPI") || s.name.includes("Backend"));
+            const db = services.find(s => s.name.includes("MongoDB"));
+            const traffic = services.find(s => s.name.includes("TomTom Traffic"));
+            const weather = services.find(s => s.name.includes("OpenWeather"));
+            const ws = services.find(s => s.name.includes("WebSocket"));
+
+            if (document.getElementById('adm-sys-status')) {
+                const status = sys?.status || 'ONLINE';
+                document.getElementById('adm-sys-status').innerHTML = `SYSTEM <b class="${status === 'ONLINE' ? 'text-mint' : 'text-peach'}">● ${status}</b>`;
+            }
+            if (document.getElementById('adm-db-status')) {
+                const status = db?.status || 'CONNECTED';
+                document.getElementById('adm-db-status').innerHTML = `DATABASE <b class="${['ONLINE', 'CONNECTED'].includes(status) ? 'text-mint' : 'text-peach'}">● ${status}</b>`;
+            }
+            if (document.getElementById('adm-traffic-status')) {
+                const status = traffic?.status || 'CONNECTED';
+                document.getElementById('adm-traffic-status').innerHTML = `TRAFFIC API <b class="${['ONLINE', 'CONNECTED'].includes(status) ? 'text-mint' : 'text-peach'}">● ${status}</b>`;
+            }
+            if (document.getElementById('adm-weather-status')) {
+                const status = weather?.status || 'CONNECTED';
+                document.getElementById('adm-weather-status').innerHTML = `WEATHER API <b class="${['ONLINE', 'CONNECTED'].includes(status) ? 'text-mint' : 'text-peach'}">● ${status}</b>`;
+            }
+            if (document.getElementById('adm-ws-status')) {
+                const status = ws?.status || 'CONNECTED';
+                document.getElementById('adm-ws-status').innerHTML = `WEBSOCKET <b class="${['ONLINE', 'CONNECTED'].includes(status) ? 'text-mint' : 'text-peach'}">● ${status}</b>`;
+            }
+
             const container = document.getElementById('adm-health-services-list');
-            if (container && data.services) {
+            if (container) {
                 container.innerHTML = '';
-                data.services.forEach(srv => {
+                services.forEach(srv => {
                     const item = document.createElement('div');
                     item.style.cssText = 'display:flex;justify-content:space-between;align-items:center;background:rgba(255,255,255,0.03);padding:8px 12px;border-radius:6px;font-size:12px;';
                     const isOnline = srv.status === 'ONLINE' || srv.status === 'CONNECTED';
@@ -3312,6 +3341,31 @@ document.addEventListener('DOMContentLoaded', () => {
     document.getElementById('btn-refresh-admin-data')?.addEventListener('click', () => {
         showToast('Refreshing Admin Console metrics...', 'info');
         fetchAdminData();
+    });
+
+    // Quick Action button listeners
+    document.getElementById('btn-qa-op-approvals')?.addEventListener('click', () => {
+        const pendingTab = document.querySelector('#adm-op-tabs button[data-tab="PENDING_APPROVAL"]');
+        if (pendingTab) pendingTab.click();
+        document.getElementById('adm-op-section')?.scrollIntoView({ behavior: 'smooth' });
+    });
+
+    document.getElementById('btn-qa-op-mgmt')?.addEventListener('click', () => {
+        const allTab = document.querySelector('#adm-op-tabs button[data-tab="ALL"]');
+        if (allTab) allTab.click();
+        document.getElementById('adm-op-section')?.scrollIntoView({ behavior: 'smooth' });
+    });
+
+    document.getElementById('btn-qa-sys-health')?.addEventListener('click', () => {
+        document.getElementById('adm-health-services-list')?.scrollIntoView({ behavior: 'smooth' });
+    });
+
+    document.getElementById('btn-qa-audit-logs')?.addEventListener('click', () => {
+        document.getElementById('adm-audit-table')?.scrollIntoView({ behavior: 'smooth' });
+    });
+
+    document.getElementById('btn-qa-sys-notifs')?.addEventListener('click', () => {
+        document.getElementById('adm-notifications-feed')?.scrollIntoView({ behavior: 'smooth' });
     });
 });
 
@@ -3970,13 +4024,26 @@ function initAuthAndProfile() {
         const token = localStorage.getItem('traffic_ai_token') || localStorage.getItem('trafficai_token');
         const current_password = document.getElementById('profile-current-pass')?.value;
         const new_password = document.getElementById('profile-new-pass')?.value;
+        const confirm_password = document.getElementById('profile-confirm-pass')?.value;
 
         if (!current_password || !new_password) {
-            showToast('Please enter current and new password', 'warning');
+            showToast('Please enter current and new password.', 'warning');
             return;
         }
-        if (new_password.length < 6) {
-            showToast('New password must be at least 6 characters', 'warning');
+
+        if (confirm_password && new_password !== confirm_password) {
+            showToast('New password and confirm password do not match.', 'warning');
+            return;
+        }
+
+        if (new_password.length < 8 || new_password.length > 16) {
+            showToast('Password must be between 8 and 16 characters long.', 'warning');
+            return;
+        }
+
+        const strongPwdRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[!@#$%^&*()_+\-=\[\]{}|;:,.<>?/~]).{8,16}$/;
+        if (!strongPwdRegex.test(new_password)) {
+            showToast('Password must contain at least 1 uppercase, 1 lowercase, 1 number, and 1 special character (!@#$).', 'warning');
             return;
         }
 
@@ -3992,8 +4059,9 @@ function initAuthAndProfile() {
             const data = await res.json();
             if (res.ok) {
                 showToast('Password updated successfully!', 'success');
-                document.getElementById('profile-current-pass').value = '';
-                document.getElementById('profile-new-pass').value = '';
+                if (document.getElementById('profile-current-pass')) document.getElementById('profile-current-pass').value = '';
+                if (document.getElementById('profile-new-pass')) document.getElementById('profile-new-pass').value = '';
+                if (document.getElementById('profile-confirm-pass')) document.getElementById('profile-confirm-pass').value = '';
             } else {
                 showToast(data.detail || 'Failed to update password', 'error');
             }
@@ -4118,7 +4186,7 @@ async function loadUserProfileData() {
     const token = localStorage.getItem('traffic_ai_token') || localStorage.getItem('trafficai_token');
     const authHeader = token ? { 'Authorization': `Bearer ${token}` } : {};
 
-    // 0. Load live user profile from MongoDB
+    // 0. Load live user profile from backend
     try {
         const res = await fetch(`${API_BASE}/api/v1/user/profile`, { headers: authHeader });
         if (res.ok) {
@@ -4126,7 +4194,9 @@ async function loadUserProfileData() {
             state.currentUser = user;
             updateHeaderUserDisplay();
 
+            const role = (user.role || 'USER').toUpperCase();
             const initials = user.initials || getInitialsFromName(user.name);
+
             const avatarBox = document.getElementById('profile-avatar-box');
             if (avatarBox) avatarBox.textContent = initials;
 
@@ -4134,16 +4204,19 @@ async function loadUserProfileData() {
             if (nameEl) nameEl.textContent = user.name || 'User Profile';
 
             const roleEl = document.getElementById('profile-user-role');
-            if (roleEl) roleEl.textContent = user.role_display || user.role || 'Commuter';
+            let roleDisplay = 'Commuter';
+            if (role === 'ADMIN' || role === 'SUPER_ADMIN') roleDisplay = 'System Administrator';
+            else if (role === 'TRAFFIC_OPERATOR' || role === 'OPERATOR') roleDisplay = 'Traffic Operator';
+            if (roleEl) roleEl.textContent = roleDisplay;
 
             const providerPill = document.getElementById('profile-auth-provider');
             if (providerPill) {
-                providerPill.textContent = user.auth_provider === 'google' ? 'Google Account' : 'MongoDB / Local';
+                providerPill.textContent = user.auth_provider === 'google' ? 'Google Account' : 'Local Account';
             }
 
             const verifiedPill = document.getElementById('profile-email-verified');
             if (verifiedPill) {
-                verifiedPill.textContent = user.email_verified ? 'Email Verified ✓' : 'Unverified';
+                verifiedPill.textContent = user.email_verified ? 'Email Verified ✓' : 'Unverified Account';
                 verifiedPill.className = user.email_verified ? 'route-tag-pill tag-rec' : 'route-tag-pill tag-severe';
             }
 
@@ -4151,7 +4224,7 @@ async function loadUserProfileData() {
             if (emailEl) emailEl.textContent = user.email || 'N/A';
 
             const detProv = document.getElementById('profile-detail-provider');
-            if (detProv) detProv.textContent = user.auth_provider === 'google' ? 'Google OAuth 2.0' : 'MongoDB / Local Encrypted';
+            if (detProv) detProv.textContent = user.auth_provider === 'google' ? 'Google OAuth 2.0' : 'Local Encrypted Account';
 
             const detVer = document.getElementById('profile-detail-verified');
             if (detVer) {
@@ -4169,7 +4242,54 @@ async function loadUserProfileData() {
                 }
             }
 
-            // Pre-fill Edit form
+            // Role-specific Profile Tabs & Edit Section Toggling
+            const tabRow = document.querySelector('.profile-tabs-row');
+            const editSection = document.getElementById('section-edit-profile');
+
+            if (role === 'ADMIN' || role === 'SUPER_ADMIN') {
+                if (tabRow) {
+                    tabRow.innerHTML = `
+                        <button class="prof-tab-btn active" data-tab="prof-tab-overview">Account Overview</button>
+                        <button class="prof-tab-btn" data-tab="prof-tab-security">Security & Password</button>
+                    `;
+                }
+                if (editSection) editSection.style.display = 'none';
+            } else if (role === 'TRAFFIC_OPERATOR' || role === 'OPERATOR') {
+                if (tabRow) {
+                    tabRow.innerHTML = `
+                        <button class="prof-tab-btn active" data-tab="prof-tab-overview">Account Overview</button>
+                        <button class="prof-tab-btn" data-tab="prof-tab-assignment">Operational Assignment</button>
+                        <button class="prof-tab-btn" data-tab="prof-tab-security">Security & Password</button>
+                        <button class="prof-tab-btn" data-tab="prof-tab-prefs">Notifications</button>
+                    `;
+                }
+                if (editSection) editSection.style.display = 'none';
+            } else {
+                // USER / Commuter
+                if (tabRow) {
+                    tabRow.innerHTML = `
+                        <button class="prof-tab-btn active" data-tab="prof-tab-overview">Account Info</button>
+                        <button class="prof-tab-btn" data-tab="prof-tab-places">Saved Places</button>
+                        <button class="prof-tab-btn" data-tab="prof-tab-routes">Saved Routes</button>
+                        <button class="prof-tab-btn" data-tab="prof-tab-history">Trip History</button>
+                        <button class="prof-tab-btn" data-tab="prof-tab-prefs">Alerts & Privacy</button>
+                    `;
+                }
+                if (editSection) editSection.style.display = 'block';
+            }
+
+            // Re-bind tab switching listeners
+            document.querySelectorAll('.prof-tab-btn').forEach(btn => {
+                btn.addEventListener('click', () => {
+                    document.querySelectorAll('.prof-tab-btn').forEach(b => b.classList.remove('active'));
+                    document.querySelectorAll('.prof-tab-content').forEach(c => c.classList.remove('active'));
+                    btn.classList.add('active');
+                    const tabId = btn.dataset.tab;
+                    document.getElementById(tabId)?.classList.add('active');
+                });
+            });
+
+            // Pre-fill Edit form for USER
             const editName = document.getElementById('profile-edit-name');
             if (editName) editName.value = user.name || '';
 
@@ -4179,7 +4299,7 @@ async function loadUserProfileData() {
             const editPhone = document.getElementById('profile-edit-phone');
             if (editPhone) editPhone.value = user.phone || '';
 
-            // Hide password section for Google users if they have no password
+            // Hide password section for Google OAuth users with no local password
             const passSec = document.getElementById('section-change-password');
             if (passSec) {
                 passSec.style.display = (user.auth_provider === 'google' && !user.password_hash) ? 'none' : 'block';

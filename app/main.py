@@ -477,6 +477,12 @@ def get_user_profile(user: dict = Depends(get_current_user_from_header)):
 
 @app.put("/api/v1/user/profile")
 def update_user_profile(req: UpdateProfileRequest, user: dict = Depends(get_current_user_from_header)):
+    user_role = (user.get("role") or "").upper()
+    if user_role in ["ADMIN", "SUPER_ADMIN"]:
+        raise HTTPException(
+            status_code=403, 
+            detail="System Administrators cannot modify profile details via this endpoint. Use password change endpoint."
+        )
     try:
         updated = auth_manager.update_profile(user["id"], req.model_dump(exclude_unset=True))
         return {"status": "success", "message": "Profile updated successfully.", "user": updated}
