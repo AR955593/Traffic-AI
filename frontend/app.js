@@ -539,10 +539,24 @@ function bindAuthForms() {
         const ident = document.getElementById('reg-identifier').value;
         const pass = document.getElementById('reg-password').value;
         const passConfirm = document.getElementById('reg-password-confirm').value;
+        const role = document.querySelector('input[name="reg-role"]:checked')?.value || 'USER';
+        const phone = document.getElementById('reg-phone')?.value || '';
+        const countryCode = document.getElementById('reg-country-code')?.value || '+91';
         const btn = document.getElementById('btn-register-submit');
         
         if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test((ident || '').trim())) {
             showToast('Please enter a valid email address (e.g. name@domain.com).', 'warning');
+            return;
+        }
+
+        if (pass.length < 8 || pass.length > 16) {
+            showToast('Password must be between 8 and 16 characters long.', 'warning');
+            return;
+        }
+
+        const strongPwdRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[!@#$%^&*()_+\-=\[\]{}|;:,.<>?/~]).{8,16}$/;
+        if (!strongPwdRegex.test(pass)) {
+            showToast('Password must contain at least 1 uppercase, 1 lowercase, 1 number, and 1 special character (!@#$).', 'warning');
             return;
         }
 
@@ -558,10 +572,26 @@ function bindAuthForms() {
                 const res = await fetch(`${API_BASE}/api/v1/auth/register`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ email: ident.trim(), password: pass, name: name.trim() })
+                    body: JSON.stringify({
+                        email: ident.trim(),
+                        password: pass,
+                        name: name.trim(),
+                        role: role,
+                        phone: phone.trim(),
+                        country_code: countryCode
+                    })
                 });
                 const data = await res.json().catch(() => ({}));
                 if (res.ok) {
+                    if (data.status === 'PENDING_APPROVAL' || data.user?.status === 'PENDING_APPROVAL') {
+                        showToast(data.message || 'Operator account registered! Pending Admin approval before login.', 'info');
+                        // Switch to Login view
+                        document.querySelectorAll('.auth-view').forEach(v => v.style.display = 'none');
+                        const loginView = document.getElementById('view-login');
+                        if (loginView) loginView.style.display = 'flex';
+                        return;
+                    }
+
                     localStorage.setItem('traffic_ai_token', data.token);
                     localStorage.setItem('trafficai_token', data.token);
                     state.currentUser = data.user;
