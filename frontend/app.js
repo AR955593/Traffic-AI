@@ -3954,6 +3954,7 @@ function updateHeaderUserDisplay() {
         if (avatarEl) avatarEl.textContent = 'TU';
         if (nameEl) nameEl.textContent = 'Sign In';
         if (roleEl) roleEl.textContent = 'Guest User';
+        document.querySelectorAll('.admin-nav-item').forEach(el => el.style.display = 'none');
         return;
     }
 
@@ -3961,6 +3962,12 @@ function updateHeaderUserDisplay() {
     if (avatarEl) avatarEl.textContent = initials;
     if (nameEl) nameEl.textContent = state.currentUser.name || 'User';
     if (roleEl) roleEl.textContent = state.currentUser.role_display || state.currentUser.role || 'Traffic User';
+
+    // Show/hide Admin panel nav item
+    const adminNavItems = document.querySelectorAll('.admin-nav-item');
+    adminNavItems.forEach(el => {
+        el.style.display = (state.currentUser && state.currentUser.role === 'ADMIN') ? 'flex' : 'none';
+    });
 }
 
 async function loadUserProfileData() {

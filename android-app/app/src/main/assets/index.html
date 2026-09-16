@@ -142,14 +142,19 @@
                     <div class="form-group">
                         <label>Account Type</label>
                         <div style="display:flex;gap:10px;margin-top:4px;">
-                            <label style="flex:1;cursor:pointer;background:#f8fafc;padding:10px 12px;border:1px solid #cbd5e1;border-radius:8px;display:flex;align-items:center;gap:6px;font-size:13px;font-weight:600;color:#1e293b;">
-                                <input type="radio" name="reg-role" value="USER" checked> <i class="fa-solid fa-user text-mint"></i> User / Commuter
+                            <label
+                                style="flex:1;cursor:pointer;background:#f8fafc;padding:10px 12px;border:1px solid #cbd5e1;border-radius:8px;display:flex;align-items:center;gap:6px;font-size:13px;font-weight:600;color:#1e293b;">
+                                <input type="radio" name="reg-role" value="USER" checked> <i
+                                    class="fa-solid fa-user text-mint"></i> Commuter
                             </label>
-                            <label style="flex:1;cursor:pointer;background:#f8fafc;padding:10px 12px;border:1px solid #cbd5e1;border-radius:8px;display:flex;align-items:center;gap:6px;font-size:13px;font-weight:600;color:#1e293b;">
-                                <input type="radio" name="reg-role" value="TRAFFIC_OPERATOR"> <i class="fa-solid fa-user-shield text-peach"></i> Traffic Operator
+                            <label
+                                style="flex:1;cursor:pointer;background:#f8fafc;padding:10px 12px;border:1px solid #cbd5e1;border-radius:8px;display:flex;align-items:center;gap:6px;font-size:13px;font-weight:600;color:#1e293b;">
+                                <input type="radio" name="reg-role" value="TRAFFIC_OPERATOR"> <i
+                                    class="fa-solid fa-user-shield text-peach"></i> Traffic Operator
                             </label>
                         </div>
-                        <small class="text-dim" style="font-size:11px;display:block;margin-top:4px;color:#64748b;">* Operator accounts require Primary Admin verification before login.</small>
+                        <small class="text-dim" style="font-size:11px;display:block;margin-top:4px;color:#64748b;">*
+                            Operator accounts require Primary Admin verification before login.</small>
                     </div>
 
                     <div class="form-group">
@@ -159,36 +164,38 @@
                     <div class="form-group">
                         <label>Email Address</label>
                         <input type="email" id="reg-identifier" placeholder="Enter your email" required>
-                        <small class="text-dim" style="font-size:10px;color:#64748b;">* Temp/disposable email addresses are strictly blocked.</small>
+                        <small class="text-dim" style="font-size:10px;color:#64748b;">* Temp/disposable email addresses
+                            are strictly blocked.</small>
                     </div>
                     <div class="form-group">
-                        <label>Phone Number (with Country Code)</label>
+                        <label>Phone Number</label>
                         <div style="display:flex;gap:6px;">
-                            <select id="reg-country-code" style="width:110px;background:#fff;border:1px solid #cbd5e1;border-radius:8px;padding:10px;font-size:13px;">
-                                <option value="+91" selected>🇮🇳 +91</option>
-                                <option value="+1">🇺🇸 +1</option>
-                                <option value="+44">🇬🇧 +44</option>
-                                <option value="+971">🇦🇪 +971</option>
-                                <option value="+61">🇦🇺 +61</option>
-                                <option value="+49">🇩🇪 +49</option>
-                                <option value="+33">🇫🇷 +33</option>
-                                <option value="+81">🇯🇵 +81</option>
-                                <option value="+92">🇵🇰 +92</option>
-                                <option value="+880">🇧🇩 +880</option>
-                                <option value="+977">🇳🇵 +977</option>
+                            <select id="reg-country-code"
+                                style="width:110px;background:#fff;border:1px solid #cbd5e1;border-radius:8px;padding:10px;font-size:13px;">
+                                <option value="+91" selected>IN +91</option>
+                                <option value="+1">US +1</option>
+                                <option value="+44">GB +44</option>
+                                <option value="+971">AE +971</option>
+                                <option value="+61">AU +61</option>
+                                <option value="+49">DE +49</option>
+                                <option value="+33">FR +33</option>
+                                <option value="+81">JP +81</option>
+                                <option value="+92">PK +92</option>
+                                <option value="+880">BP +880</option>
+                                <option value="+977">NP +977</option>
                             </select>
                             <input type="tel" id="reg-phone" placeholder="9876543210" style="flex:1;">
                         </div>
                     </div>
                     <div class="form-group">
-                        <label>Password (8–16 chars: A-Z, a-z, 0-9 & Special Char)</label>
+                        <label>Password </label>
                         <div class="input-with-eye">
-                            <input type="password" id="reg-password"
-                                placeholder="8-16 chars (Uppercase, Lowercase, Number & Special)" required>
+                            <input type="password" id="reg-password" placeholder="Create Password" required>
                             <button type="button" class="btn-eye-toggle" aria-label="Toggle password visibility"
                                 data-target="reg-password"><i class="fa-solid fa-eye"></i></button>
                         </div>
-                        <small class="text-dim" style="font-size:10px;color:#64748b;">Must be 8-16 chars, contain 1 uppercase, 1 lowercase, 1 number, and 1 special char (!@#$).</small>
+                        <small class="text-dim" style="font-size:10px;color:#64748b;">Must be 8-16 chars, contain 1
+                            uppercase, 1 lowercase, 1 number, and 1 special char (!@#$).</small>
                     </div>
                     <div class="form-group">
                         <label>Confirm Password</label>
@@ -2169,14 +2176,20 @@
                     <div class="form-group">
                         <label>Account Type</label>
                         <div style="display:flex;gap:10px;margin-top:4px;">
-                            <label style="flex:1;cursor:pointer;background:var(--bg-card, #1e293b);padding:8px 12px;border:1px solid var(--border-color, #334155);border-radius:6px;display:flex;align-items:center;gap:6px;font-size:13px;">
-                                <input type="radio" name="auth-reg-role" value="USER" checked> <i class="fa-solid fa-user text-mint"></i> User / Commuter
+                            <label
+                                style="flex:1;cursor:pointer;background:var(--bg-card, #1e293b);padding:8px 12px;border:1px solid var(--border-color, #334155);border-radius:6px;display:flex;align-items:center;gap:6px;font-size:13px;">
+                                <input type="radio" name="auth-reg-role" value="USER" checked> <i
+                                    class="fa-solid fa-user text-mint"></i> User / Commuter
                             </label>
-                            <label style="flex:1;cursor:pointer;background:var(--bg-card, #1e293b);padding:8px 12px;border:1px solid var(--border-color, #334155);border-radius:6px;display:flex;align-items:center;gap:6px;font-size:13px;">
-                                <input type="radio" name="auth-reg-role" value="TRAFFIC_OPERATOR"> <i class="fa-solid fa-user-shield text-peach"></i> Traffic Operator
+                            <label
+                                style="flex:1;cursor:pointer;background:var(--bg-card, #1e293b);padding:8px 12px;border:1px solid var(--border-color, #334155);border-radius:6px;display:flex;align-items:center;gap:6px;font-size:13px;">
+                                <input type="radio" name="auth-reg-role" value="TRAFFIC_OPERATOR"> <i
+                                    class="fa-solid fa-user-shield text-peach"></i> Traffic Operator
                             </label>
                         </div>
-                        <small class="text-dim" style="font-size:11px;display:block;margin-top:4px;color:var(--text-muted);">* Traffic Operator accounts require Primary Admin verification before login.</small>
+                        <small class="text-dim"
+                            style="font-size:11px;display:block;margin-top:4px;color:var(--text-muted);">* Traffic
+                            Operator accounts require Primary Admin verification before login.</small>
                     </div>
 
                     <div class="form-group">
@@ -2186,7 +2199,8 @@
                     <div class="form-group">
                         <label>Email Address</label>
                         <input type="email" id="auth-reg-email" class="custom-input" placeholder="user@example.com">
-                        <small class="text-dim" style="font-size:10px;color:var(--text-muted);">* Temp/disposable email addresses are strictly blocked.</small>
+                        <small class="text-dim" style="font-size:10px;color:var(--text-muted);">* Temp/disposable email
+                            addresses are strictly blocked.</small>
                     </div>
                     <div class="form-group">
                         <label>Phone Number (with Country Code)</label>
@@ -2204,13 +2218,15 @@
                                 <option value="+880">🇧🇩 +880</option>
                                 <option value="+977">🇳🇵 +977</option>
                             </select>
-                            <input type="tel" id="auth-reg-phone" class="custom-input" placeholder="9876543210" style="flex:1;">
+                            <input type="tel" id="auth-reg-phone" class="custom-input" placeholder="9876543210"
+                                style="flex:1;">
                         </div>
                     </div>
                     <div class="form-group">
                         <label>Password (8–16 chars: A-Z, a-z, 0-9 & Special Char)</label>
                         <input type="password" id="auth-reg-password" class="custom-input" placeholder="••••••••">
-                        <small class="text-dim" style="font-size:10px;color:var(--text-muted);">Must be 8-16 chars, contain 1 uppercase, 1 lowercase, 1 number, and 1 special char (!@#$).</small>
+                        <small class="text-dim" style="font-size:10px;color:var(--text-muted);">Must be 8-16 chars,
+                            contain 1 uppercase, 1 lowercase, 1 number, and 1 special char (!@#$).</small>
                     </div>
                     <div class="form-group">
                         <label>City / Region</label>
