@@ -6,7 +6,11 @@ and Notification Preferences stored in MongoDB collections with strict user-leve
 import uuid
 from typing import Dict, List, Any, Optional
 from datetime import datetime, timezone
+import os
+
 from mongo_db import get_mongo_db
+
+IS_PRODUCTION = os.getenv("ENV", "").lower() in ["production", "prod"] or os.getenv("VERCEL") == "1" or os.getenv("RENDER") == "1" or os.getenv("ENVIRONMENT", "").lower() in ["production", "prod"]
 
 class UserService:
     def __init__(self):
@@ -277,9 +281,9 @@ class UserService:
         return {k: v for k, v in doc.items() if k != "_id"}
 
     def get_user_notifications(self, user_id: str, limit: int = 50, unread_only: bool = False) -> List[Dict[str, Any]]:
-        # Auto-seed role-specific default notifications if user has 0 notifications
+        # Auto-seed role-specific default notifications ONLY in demo/dev mode if user has 0 notifications
         total_count = self.db.notifications.count_documents({"user_id": user_id})
-        if total_count == 0:
+        if total_count == 0 and (not IS_PRODUCTION or os.getenv("DEMO_MODE")):
             user_doc = self.db.users.find_one({"$or": [{"id": user_id}, {"_id": user_id}]}) or {}
             role = user_doc.get("role", "USER")
             

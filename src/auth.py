@@ -897,6 +897,22 @@ class AuthManager:
             }}
         )
 
+        # Notify operator
+        notif_id = f"ntf_{uuid.uuid4().hex[:10]}"
+        db.notifications.insert_one({
+            "id": notif_id,
+            "notification_id": notif_id,
+            "user_id": operator_user_id,
+            "type": "OPERATOR_APPROVED",
+            "title": "Operator Account Approved",
+            "message": "Your Traffic Operator account has been verified and approved by Primary Admin.",
+            "severity": "HIGH",
+            "source": "admin_system",
+            "created_at": now_str,
+            "read_at": None,
+            "read": False
+        })
+
         updated = self.get_user_by_id(operator_user_id)
         self.audit_logger.log_action("OPERATOR_APPROVED", operator.get("name", operator_user_id), f"Operator account approved by Admin ({admin_user_id}).")
         return {"status": "success", "message": "Operator account approved and activated.", "user": updated}
@@ -921,9 +937,103 @@ class AuthManager:
             }}
         )
 
+        # Notify operator
+        notif_id = f"ntf_{uuid.uuid4().hex[:10]}"
+        db.notifications.insert_one({
+            "id": notif_id,
+            "notification_id": notif_id,
+            "user_id": operator_user_id,
+            "type": "OPERATOR_REJECTED",
+            "title": "Operator Application Status",
+            "message": "Your Traffic Operator registration request was rejected by Primary Admin.",
+            "severity": "HIGH",
+            "source": "admin_system",
+            "created_at": now_str,
+            "read_at": None,
+            "read": False
+        })
+
         updated = self.get_user_by_id(operator_user_id)
         self.audit_logger.log_action("OPERATOR_REJECTED", operator.get("name", operator_user_id), f"Operator application rejected by Admin ({admin_user_id}).")
         return {"status": "success", "message": "Operator application rejected.", "user": updated}
+
+    def suspend_operator(self, operator_user_id: str, admin_user_id: str = "usr_admin") -> Dict[str, Any]:
+        """Suspends an active operator account."""
+        db = get_mongo_db()
+        operator = db.users.find_one({"id": operator_user_id, "role": "TRAFFIC_OPERATOR"})
+        if not operator:
+            raise ValueError("Operator account not found.")
+
+        now_str = datetime.now(timezone.utc).isoformat()
+        db.users.update_one(
+            {"id": operator_user_id},
+            {"$set": {
+                "status": "SUSPENDED",
+                "is_active": False,
+                "suspended_by": admin_user_id,
+                "suspended_at": now_str,
+                "updated_at": now_str
+            }}
+        )
+
+        # Notify operator
+        notif_id = f"ntf_{uuid.uuid4().hex[:10]}"
+        db.notifications.insert_one({
+            "id": notif_id,
+            "notification_id": notif_id,
+            "user_id": operator_user_id,
+            "type": "OPERATOR_SUSPENDED",
+            "title": "Operator Account Suspended",
+            "message": "Your Traffic Operator account has been suspended by System Admin.",
+            "severity": "HIGH",
+            "source": "admin_system",
+            "created_at": now_str,
+            "read_at": None,
+            "read": False
+        })
+
+        updated = self.get_user_by_id(operator_user_id)
+        self.audit_logger.log_action("OPERATOR_SUSPENDED", operator.get("name", operator_user_id), f"Operator account suspended by Admin ({admin_user_id}).")
+        return {"status": "success", "message": "Operator account suspended.", "user": updated}
+
+    def reactivate_operator(self, operator_user_id: str, admin_user_id: str = "usr_admin") -> Dict[str, Any]:
+        """Reactivates a suspended operator account."""
+        db = get_mongo_db()
+        operator = db.users.find_one({"id": operator_user_id, "role": "TRAFFIC_OPERATOR"})
+        if not operator:
+            raise ValueError("Operator account not found.")
+
+        now_str = datetime.now(timezone.utc).isoformat()
+        db.users.update_one(
+            {"id": operator_user_id},
+            {"$set": {
+                "status": "APPROVED",
+                "is_active": True,
+                "reactivated_by": admin_user_id,
+                "reactivated_at": now_str,
+                "updated_at": now_str
+            }}
+        )
+
+        # Notify operator
+        notif_id = f"ntf_{uuid.uuid4().hex[:10]}"
+        db.notifications.insert_one({
+            "id": notif_id,
+            "notification_id": notif_id,
+            "user_id": operator_user_id,
+            "type": "OPERATOR_APPROVED",
+            "title": "Operator Account Reactivated",
+            "message": "Your Traffic Operator account has been reactivated by System Admin.",
+            "severity": "HIGH",
+            "source": "admin_system",
+            "created_at": now_str,
+            "read_at": None,
+            "read": False
+        })
+
+        updated = self.get_user_by_id(operator_user_id)
+        self.audit_logger.log_action("OPERATOR_REACTIVATED", operator.get("name", operator_user_id), f"Operator account reactivated by Admin ({admin_user_id}).")
+        return {"status": "success", "message": "Operator account reactivated.", "user": updated}
 
     def send_phone_otp(self, phone: str, country_code: str = "+91") -> Dict[str, Any]:
         """Generates and stores a 6-digit phone verification OTP."""

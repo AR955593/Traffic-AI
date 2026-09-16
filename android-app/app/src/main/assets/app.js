@@ -963,6 +963,17 @@ function initNavigation() {
 }
 
 function switchView(viewName) {
+    const userRole = state.currentUser ? (state.currentUser.role || 'USER').toUpperCase() : 'USER';
+
+    // RBAC Frontend Security Route Guard
+    if (viewName === 'administration' && userRole !== 'ADMIN') {
+        showToast('Access Denied: System Admin authorization required.', 'error');
+        viewName = (userRole === 'TRAFFIC_OPERATOR') ? 'operator-dashboard' : 'live-operations';
+    } else if (viewName === 'operator-dashboard' && !['TRAFFIC_OPERATOR', 'ADMIN'].includes(userRole)) {
+        showToast('Access Denied: Traffic Operator authorization required.', 'error');
+        viewName = 'live-operations';
+    }
+
     if (state.currentView !== viewName) {
         state.viewHistory.push(state.currentView);
     }

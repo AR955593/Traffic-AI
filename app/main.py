@@ -21,7 +21,7 @@ sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "s
 
 from network_graph import get_kanpur_network, CITIES
 from geocoding import GeocodingEngine
-from incidents import IncidentManager
+from incidents import IncidentManager, Incident
 from simulator import TrafficSimulator
 from router import SmartRouter
 from providers import ProviderManager
@@ -238,6 +238,17 @@ class IncidentPayload(BaseModel):
     description: Optional[str] = ""
     source: Optional[str] = "Community Report"
     photo_url: Optional[str] = None
+
+class VerifyIncidentRequest(BaseModel):
+    incident_id: str
+    status: str = "VERIFIED"  # "VERIFIED", "REJECTED", "RESOLVED"
+    public_note: Optional[str] = None
+
+class PublishAlertRequest(BaseModel):
+    title: str
+    message: str
+    severity: str = "MEDIUM"  # "HIGH", "MEDIUM", "LOW"
+    location: Optional[str] = "Citywide"
 
 # -------------------------------------------------------------
 # STRICT AUTHENTICATION & RBAC DEPENDENCIES
@@ -758,6 +769,144 @@ def get_traffic_incidents(lat: float = Query(default=51.5074), lon: float = Quer
         "updated_at": datetime.now(timezone.utc).isoformat()
     }
 
+# -------------------------------------------------------------
+# WORKFLOW ENDPOINTS: INCIDENT REPORTING, TRIAGE & ALERTS
+# -------------------------------------------------------------
+@app.post("/api/v1/incidents/report")
+@app.post("/api/v1/user/incidents/report")
+def report_incident(payload: IncidentPayload, user: dict = Depends(require_authenticated_user)):
+    """User/Commuter submits an incident report -> notifies Traffic Operators."""
+    inc_id = f"INC-{uuid.uuid4().hex[:6].upper()}"
+    title = payload.title or f"{payload.incident_type or 'Incident'} reported near ({payload.latitude:.3f}, {payload.longitude:.3f})"
+    
+    # Create incident in IncidentManager
+    new_inc = Incident(
+        incident_id=inc_id,
+        title=title,
+        incident_type=payload.incident_type or "Accident",
+        severity=payload.severity or "Moderate",
+        road_segment_id=payload.road_segment_id or "SEG014",
+        latitude=payload.latitude,
+        longitude=payload.longitude,
+        description=payload.description or "User reported traffic incident.",
+        status="Reported",
+        source=f"Commuter Report ({user.get('name', 'User')})"
+    )
+    incident_manager.incidents[inc_id] = new_inc
+
+    # Persist in MongoDB user_incidents collection
+    db = get_mongo_db()
+    db.user_incidents.insert_one({
+        "id": inc_id,
+        "incident_id": inc_id,
+        "user_id": user["id"],
+        "reporter_name": user.get("name", "Commuter"),
+        "title": title,
+        "incident_type": payload.incident_type or "Accident",
+        "severity": payload.severity or "Moderate",
+        "latitude": payload.latitude,
+        "longitude": payload.longitude,
+        "description": payload.description or "",
+        "status": "Reported",
+        "created_at": datetime.now(timezone.utc).isoformat()
+    })
+
+    # Workflow Trigger: USER -> OPERATOR notification
+    operators = db.users.find({"role": "TRAFFIC_OPERATOR"})
+    for op in operators:
+        op_id = op.get("id") or str(op.get("_id"))
+        user_service.create_notification(
+            user_id=op_id,
+            notif_type="INCIDENT_CREATED",
+            title="New Commuter Incident Report",
+            message=f"{user.get('name', 'Commuter')} reported {payload.incident_type or 'an incident'} ({title}). Verification required.",
+            severity="HIGH" if (payload.severity or "").upper() in ["HIGH", "SEVERE"] else "MEDIUM",
+            source="user_report",
+            source_id=inc_id
+        )
+
+    return {"status": "success", "message": "Incident report submitted for Operator review.", "incident": new_inc.to_dict()}
+
+@app.get("/api/v1/operator/incidents")
+def get_operator_incidents(user: dict = Depends(require_operator_user)):
+    """Traffic Operator endpoint to view all reported & active incidents for triage."""
+    all_incidents = [inc.to_dict() for inc in incident_manager.incidents.values()]
+    return {"status": "success", "count": len(all_incidents), "incidents": all_incidents}
+
+@app.post("/api/v1/operator/incidents/verify")
+def verify_incident(req: VerifyIncidentRequest, user: dict = Depends(require_operator_user)):
+    """Traffic Operator verifies, updates status, or rejects a reported incident -> notifies Commuters."""
+    inc = incident_manager.incidents.get(req.incident_id)
+    if not inc:
+        raise HTTPException(status_code=404, detail="Incident not found.")
+
+    inc.status = req.status
+    inc.updated_at = datetime.now(timezone.utc).isoformat()
+
+    # Sync status in MongoDB
+    db = get_mongo_db()
+    db.user_incidents.update_one(
+        {"incident_id": req.incident_id},
+        {"$set": {"status": req.status, "verified_by": user["id"], "public_note": req.public_note, "updated_at": inc.updated_at}}
+    )
+
+    # Workflow Trigger: OPERATOR -> USER notification if verified/resolved
+    if req.status in ["VERIFIED", "RESOLVED"]:
+        # Send public notification to all users
+        commuters = db.users.find({"role": "USER"})
+        for c in commuters:
+            c_id = c.get("id") or str(c.get("_id"))
+            user_service.create_notification(
+                user_id=c_id,
+                notif_type="INCIDENT_VERIFIED" if req.status == "VERIFIED" else "INCIDENT_RESOLVED",
+                title=f"Traffic Update: {inc.title}",
+                message=f"Traffic Operator verified: {inc.description}. {req.public_note or ''}".strip(),
+                severity="HIGH" if inc.severity in ["Major", "Severe"] else "MEDIUM",
+                source="operator_triage",
+                source_id=inc.incident_id
+            )
+
+    auth_manager.audit_logger.log_action("INCIDENT_VERIFIED", user.get("name", "Operator"), f"Incident {req.incident_id} marked as {req.status}")
+    return {"status": "success", "message": f"Incident {req.incident_id} status updated to {req.status}.", "incident": inc.to_dict()}
+
+@app.post("/api/v1/operator/alerts/publish")
+def publish_traffic_alert(req: PublishAlertRequest, user: dict = Depends(require_operator_user)):
+    """Traffic Operator composes and publishes a public traffic alert -> creates real notification for commuters."""
+    db = get_mongo_db()
+    now_str = datetime.now(timezone.utc).isoformat()
+    alert_id = f"ALT-{uuid.uuid4().hex[:6].upper()}"
+
+    # Store alert in MongoDB
+    db.traffic_alerts.insert_one({
+        "id": alert_id,
+        "title": req.title,
+        "message": req.message,
+        "severity": req.severity,
+        "location": req.location,
+        "publisher_id": user["id"],
+        "publisher_name": user.get("name", "Traffic Operator"),
+        "created_at": now_str
+    })
+
+    # Workflow Trigger: OPERATOR -> USER broadcast notifications
+    commuters = db.users.find({"role": "USER"})
+    notif_count = 0
+    for c in commuters:
+        c_id = c.get("id") or str(c.get("_id"))
+        user_service.create_notification(
+            user_id=c_id,
+            notif_type="TRAFFIC_ALERT",
+            title=f"🚨 Traffic Alert: {req.title}",
+            message=f"{req.message} (Location: {req.location})",
+            severity=req.severity,
+            source="operator_alert",
+            source_id=alert_id
+        )
+        notif_count += 1
+
+    auth_manager.audit_logger.log_action("TRAFFIC_ALERT_PUBLISHED", user.get("name", "Operator"), f"Alert published: {req.title} for {req.location}")
+    return {"status": "success", "message": f"Public traffic alert published to {notif_count} commuters.", "alert_id": alert_id}
+
 @app.get("/api/v1/traffic/segments/{segment_id}")
 def get_segment_detail(segment_id: str, model_choice: str = "Gradient_Boosting"):
     states = simulator._calculate_segment_states()
@@ -1194,6 +1343,20 @@ def approve_operator(req: OperatorApprovalRequest, user: dict = Depends(verify_a
 def reject_operator(req: OperatorApprovalRequest, user: dict = Depends(verify_admin_access)):
     try:
         return auth_manager.reject_operator(req.operator_user_id, admin_user_id=user["id"])
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+@app.post("/api/v1/admin/suspend-operator")
+def suspend_operator(req: OperatorApprovalRequest, user: dict = Depends(verify_admin_access)):
+    try:
+        return auth_manager.suspend_operator(req.operator_user_id, admin_user_id=user["id"])
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+@app.post("/api/v1/admin/reactivate-operator")
+def reactivate_operator(req: OperatorApprovalRequest, user: dict = Depends(verify_admin_access)):
+    try:
+        return auth_manager.reactivate_operator(req.operator_user_id, admin_user_id=user["id"])
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
 
