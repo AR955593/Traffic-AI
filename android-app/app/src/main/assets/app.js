@@ -161,6 +161,13 @@ function initAuthFlow() {
     }, 1500);
 }
 
+function getRoleDefaultDashboard(role) {
+    const r = (role || '').toUpperCase();
+    if (r === 'ADMIN' || r === 'SUPER_ADMIN') return 'administration';
+    if (r === 'TRAFFIC_OPERATOR' || r === 'OPERATOR') return 'operator-dashboard';
+    return 'live-operations';
+}
+
 function completeAuthAndStartApp() {
     // Hide Auth wrapper, show App layout
     document.getElementById('auth-wrapper').style.display = 'none';
@@ -184,16 +191,19 @@ function completeAuthAndStartApp() {
         updateHeaderUserDisplay();
     }
 
+    const role = user ? (user.role || 'USER').toUpperCase() : 'USER';
+    const targetDashboard = getRoleDefaultDashboard(role);
+
     // Role-specific Dashboard Landing & RBAC View Switch
-    if (user && user.role === 'ADMIN') {
+    if (role === 'ADMIN' || role === 'SUPER_ADMIN') {
         if (typeof fetchAdminData === 'function') fetchAdminData();
-        if (typeof switchView === 'function') switchView('administration');
-        showToast(`Logged in as System Admin (${user.name})`, 'success');
-    } else if (user && user.role === 'TRAFFIC_OPERATOR') {
-        if (typeof switchView === 'function') switchView('operator-dashboard');
-        showToast(`Logged in as Traffic Operator (${user.name})`, 'success');
+        if (typeof switchView === 'function') switchView(targetDashboard);
+        showToast(`Logged in as System Admin (${user?.name || 'Admin'})`, 'success');
+    } else if (role === 'TRAFFIC_OPERATOR' || role === 'OPERATOR') {
+        if (typeof switchView === 'function') switchView(targetDashboard);
+        showToast(`Logged in as Traffic Operator (${user?.name || 'Operator'})`, 'success');
     } else {
-        if (typeof switchView === 'function') switchView('live-operations');
+        if (typeof switchView === 'function') switchView(targetDashboard);
         showToast(`Welcome back to TrafficAI, ${user?.name || 'Commuter'}`, 'success');
     }
 
@@ -965,13 +975,25 @@ function initNavigation() {
 function switchView(viewName) {
     const userRole = state.currentUser ? (state.currentUser.role || 'USER').toUpperCase() : 'USER';
 
-    // RBAC Frontend Security Route Guard
-    if (viewName === 'administration' && userRole !== 'ADMIN') {
-        showToast('Access Denied: System Admin authorization required.', 'error');
-        viewName = (userRole === 'TRAFFIC_OPERATOR') ? 'operator-dashboard' : 'live-operations';
-    } else if (viewName === 'operator-dashboard' && !['TRAFFIC_OPERATOR', 'ADMIN'].includes(userRole)) {
-        showToast('Access Denied: Traffic Operator authorization required.', 'error');
-        viewName = 'live-operations';
+    // Strict Role-Based View Access Control & Route Guarding
+    if (userRole === 'ADMIN' || userRole === 'SUPER_ADMIN') {
+        const adminAllowedViews = ['administration', 'settings', 'profile', 'notifications', 'about-developer', 'privacy'];
+        if (!adminAllowedViews.includes(viewName)) {
+            viewName = 'administration';
+        }
+    } else if (userRole === 'TRAFFIC_OPERATOR' || userRole === 'OPERATOR') {
+        const operatorAllowedViews = ['operator-dashboard', 'live-operations', 'signals', 'emergency-corridor', 'cctv', 'analytics', 'settings', 'profile', 'notifications', 'about-developer', 'privacy'];
+        if (!operatorAllowedViews.includes(viewName)) {
+            showToast('Access Denied: Commuter/Admin view restricted.', 'error');
+            viewName = 'operator-dashboard';
+        }
+    } else {
+        // Standard USER / Commuter
+        const userRestrictedViews = ['administration', 'operator-dashboard', 'signals', 'emergency-corridor', 'cctv', 'analytics'];
+        if (userRestrictedViews.includes(viewName)) {
+            showToast('Access Denied: Authorization required.', 'error');
+            viewName = 'live-operations';
+        }
     }
 
     if (state.currentView !== viewName) {
@@ -3644,10 +3666,12 @@ window.TrafficAIHandleBack = function() {
     if (state.viewHistory && state.viewHistory.length > 1) {
         state.viewHistory.pop(); // remove current view
         const prevView = state.viewHistory.pop(); // pop previous view to switch to
-        switchView(prevView || 'home-dashboard');
+        const userRole = state.currentUser ? state.currentUser.role : 'USER';
+        switchView(prevView || getRoleDefaultDashboard(userRole));
         return true;
-    } else if (state.currentView !== 'home-dashboard' && state.currentView !== 'live-operations') {
-        switchView('home-dashboard');
+    } else if (state.currentView !== 'administration' && state.currentView !== 'operator-dashboard' && state.currentView !== 'live-operations') {
+        const userRole = state.currentUser ? state.currentUser.role : 'USER';
+        switchView(getRoleDefaultDashboard(userRole));
         return true;
     }
 
@@ -3677,8 +3701,8 @@ function initAuthAndProfile() {
     const btnCloseProfileFooter = document.getElementById('btn-close-profile-footer');
 
     // Check stored JWT token on startup
-    const storedToken = localStorage.getItem('traffic_ai_token');
-    if (storedToken) {
+    const storedToken = localStorage.getItem('traffic_ai_token') || localStorage.getItem('trafficai_token');
+    if (storedToken && !state.currentUser) {
         fetch(`${API_BASE}/api/v1/auth/me`, {
             headers: { 'Authorization': `Bearer ${storedToken}` }
         })
@@ -3687,6 +3711,7 @@ function initAuthAndProfile() {
             if (user) {
                 state.currentUser = user;
                 updateHeaderUserDisplay();
+                completeAuthAndStartApp();
             }
         })
         .catch(() => {});
@@ -3744,10 +3769,12 @@ function initAuthAndProfile() {
             const data = await res.json();
             if (res.ok && data.token) {
                 localStorage.setItem('traffic_ai_token', data.token);
+                localStorage.setItem('trafficai_token', data.token);
                 state.currentUser = data.user;
                 updateHeaderUserDisplay();
                 modalAuth?.classList.remove('active');
-                showToast(`Welcome back, ${data.user.name}!`, 'success');
+                if (modalAuth) modalAuth.style.display = 'none';
+                completeAuthAndStartApp();
             } else {
                 showToast(data.detail || 'Login failed', 'error');
             }
@@ -3980,6 +4007,9 @@ function initAuthAndProfile() {
         localStorage.removeItem('traffic_ai_token');
         localStorage.removeItem('trafficai_token');
         state.currentUser = null;
+        state.currentView = null;
+        state.viewHistory = [];
+        document.querySelectorAll('.view-panel').forEach(panel => panel.classList.remove('active'));
         updateHeaderUserDisplay();
         modalProfile?.classList.remove('active');
         if (modalProfile) modalProfile.style.display = 'none';
@@ -4040,6 +4070,7 @@ function updateHeaderUserDisplay() {
     const avatarEl = document.getElementById('header-user-avatar');
     const nameEl = document.getElementById('header-user-name');
     const roleEl = document.getElementById('header-user-role');
+    const kpiBar = document.getElementById('kpi-bar');
 
     if (!state.currentUser) {
         if (avatarEl) avatarEl.textContent = 'TU';
@@ -4048,6 +4079,7 @@ function updateHeaderUserDisplay() {
         document.querySelectorAll('.admin-nav-item').forEach(el => el.style.display = 'none');
         document.querySelectorAll('.operator-nav-item').forEach(el => el.style.display = 'none');
         document.querySelectorAll('.commuter-nav-item').forEach(el => el.style.display = '');
+        if (kpiBar) kpiBar.style.display = 'flex';
         return;
     }
 
@@ -4055,22 +4087,30 @@ function updateHeaderUserDisplay() {
     const initials = state.currentUser.initials || getInitialsFromName(state.currentUser.name);
     if (avatarEl) avatarEl.textContent = initials;
     if (nameEl) nameEl.textContent = state.currentUser.name || 'User';
-    if (roleEl) roleEl.textContent = state.currentUser.role_display || role;
+    
+    let roleTitle = 'Commuter';
+    if (role === 'ADMIN' || role === 'SUPER_ADMIN') roleTitle = 'System Administrator';
+    else if (role === 'TRAFFIC_OPERATOR' || role === 'OPERATOR') roleTitle = 'Traffic Operator';
 
-    // Role-based Sidebar Navigation Toggling
+    if (roleEl) roleEl.textContent = roleTitle;
+
+    // Role-based Sidebar Navigation Toggling & Header Isolation
     if (role === 'TRAFFIC_OPERATOR' || role === 'OPERATOR') {
         document.querySelectorAll('.commuter-nav-item').forEach(el => el.style.display = 'none');
         document.querySelectorAll('.admin-nav-item').forEach(el => el.style.display = 'none');
         document.querySelectorAll('.operator-nav-item').forEach(el => el.style.display = 'flex');
+        if (kpiBar) kpiBar.style.display = 'none';
     } else if (role === 'ADMIN' || role === 'SUPER_ADMIN') {
+        document.querySelectorAll('.commuter-nav-item').forEach(el => el.style.display = 'none');
+        document.querySelectorAll('.operator-nav-item').forEach(el => el.style.display = 'none');
         document.querySelectorAll('.admin-nav-item').forEach(el => el.style.display = 'flex');
-        document.querySelectorAll('.operator-nav-item').forEach(el => el.style.display = 'flex');
-        document.querySelectorAll('.commuter-nav-item').forEach(el => el.style.display = 'flex');
+        if (kpiBar) kpiBar.style.display = 'none';
     } else {
         // Standard Commuter USER
         document.querySelectorAll('.commuter-nav-item').forEach(el => el.style.display = 'flex');
         document.querySelectorAll('.operator-nav-item').forEach(el => el.style.display = 'none');
         document.querySelectorAll('.admin-nav-item').forEach(el => el.style.display = 'none');
+        if (kpiBar) kpiBar.style.display = 'flex';
     }
 }
 
