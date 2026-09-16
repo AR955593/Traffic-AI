@@ -39,7 +39,7 @@ from mongo_db import get_mongo_db, init_mongo_indexes
 IS_PRODUCTION = os.getenv("ENV", "").lower() in ["production", "prod"] or os.getenv("VERCEL") == "1" or os.getenv("RENDER") == "1" or os.getenv("ENVIRONMENT", "").lower() in ["production", "prod"]
 _raw_jwt_secret = os.getenv("JWT_SECRET_KEY")
 
-if IS_PRODUCTION and (not _raw_jwt_secret or _raw_jwt_secret == "traffic_ai_super_secret_jwt_key_2026_prod"):
+if IS_PRODUCTION and not _raw_jwt_secret:
     raise RuntimeError("CRITICAL SECURITY ERROR: JWT_SECRET_KEY environment variable must be set in production mode.")
 
 SECRET_KEY = _raw_jwt_secret or "traffic_ai_super_secret_jwt_key_2026_dev_only"
