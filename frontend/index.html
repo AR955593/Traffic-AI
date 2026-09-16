@@ -288,84 +288,91 @@
             </div>
 
             <nav class="sidebar-nav">
-                <div class="nav-section-title">COMMUTE & MOBILITY</div>
-                <button class="nav-item active" data-view="home-dashboard">
+                <!-- COMMUTER NAVIGATION -->
+                <div class="nav-section-title commuter-nav-item">COMMUTE & MOBILITY</div>
+                <button class="nav-item commuter-nav-item active" data-view="home-dashboard">
                     <i class="fa-solid fa-house"></i>
                     <span>Home Dashboard</span>
                 </button>
-                <button class="nav-item" data-view="live-operations">
+                <button class="nav-item commuter-nav-item" data-view="live-operations">
                     <i class="fa-solid fa-bolt-lightning"></i>
                     <span>Live Map</span>
                 </button>
-                <button class="nav-item" data-view="route-planner">
+                <button class="nav-item commuter-nav-item" data-view="route-planner">
                     <i class="fa-solid fa-route"></i>
                     <span>Smart Route Planner</span>
                 </button>
-                <button class="nav-item" data-view="green-route">
+                <button class="nav-item commuter-nav-item" data-view="green-route">
                     <i class="fa-solid fa-leaf text-mint"></i>
                     <span>Green Route (Eco)</span>
                 </button>
-                <button class="nav-item" data-view="nearby-services">
+                <button class="nav-item commuter-nav-item" data-view="nearby-services">
                     <i class="fa-solid fa-charging-station text-teal"></i>
                     <span>Nearby Services</span>
                 </button>
-                <button class="nav-item" data-view="forecast">
+                <button class="nav-item commuter-nav-item" data-view="forecast">
                     <i class="fa-solid fa-chart-line"></i>
                     <span>AI Forecast</span>
                 </button>
-                <button class="nav-item" data-view="incidents">
+                <button class="nav-item commuter-nav-item" data-view="incidents">
                     <i class="fa-solid fa-triangle-exclamation"></i>
                     <span>Incidents & Dispatch</span>
                     <span class="badge-count" id="sidebar-incident-badge" style="display:none;">0</span>
                 </button>
-                <button class="nav-item" data-view="ai-assistant">
+                <button class="nav-item commuter-nav-item" data-view="ai-assistant">
                     <i class="fa-solid fa-robot text-teal"></i>
                     <span>AI Assistant</span>
                 </button>
 
-                <div class="nav-section-title">MY ACCOUNT</div>
-                <button class="nav-item" data-view="saved-places">
+                <div class="nav-section-title commuter-nav-item">MY ACCOUNT</div>
+                <button class="nav-item commuter-nav-item" data-view="saved-places">
                     <i class="fa-solid fa-bookmark text-amber"></i>
                     <span>Saved Places</span>
                 </button>
-                <button class="nav-item" data-view="trip-history">
+                <button class="nav-item commuter-nav-item" data-view="trip-history">
                     <i class="fa-solid fa-clock-rotate-left"></i>
                     <span>Trip History</span>
                 </button>
-                <button class="nav-item" data-view="settings">
+                <button class="nav-item commuter-nav-item" data-view="settings">
                     <i class="fa-solid fa-gear"></i>
                     <span>Settings & Alerts</span>
                 </button>
 
-                <div class="nav-section-title">SMART CITY & OPS</div>
+                <!-- OPERATOR NAVIGATION -->
+                <div class="nav-section-title operator-nav-item" style="display:none;">TRAFFIC OPERATIONS</div>
                 <button class="nav-item operator-nav-item" data-view="operator-dashboard" style="display:none;">
                     <i class="fa-solid fa-tower-broadcast text-peach"></i>
-                    <span>Operator Control</span>
+                    <span>🚦 Operations Overview</span>
+                </button>
+                <button class="nav-item operator-nav-item" data-view="live-operations" style="display:none;">
+                    <i class="fa-solid fa-map text-teal"></i>
+                    <span>🗺 Live Traffic Map</span>
                 </button>
                 <button class="nav-item operator-nav-item" data-view="signals" style="display:none;">
                     <i class="fa-solid fa-traffic-light text-amber"></i>
-                    <span>Signal Intelligence</span>
+                    <span>🚥 Signal Intelligence</span>
                 </button>
                 <button class="nav-item operator-nav-item" data-view="emergency-corridor" style="display:none;">
                     <i class="fa-solid fa-truck-medical text-red"></i>
-                    <span>Emergency Corridor</span>
+                    <span>🚑 Emergency Corridors</span>
                 </button>
-                <button class="nav-item" data-view="digital-twin">
-                    <i class="fa-solid fa-cubes text-blue"></i>
-                    <span>City Digital Twin</span>
-                </button>
-                <button class="nav-item" data-view="cctv">
+                <button class="nav-item operator-nav-item" data-view="cctv" style="display:none;">
                     <i class="fa-solid fa-video text-teal"></i>
-                    <span>CCTV Vision Grid</span>
+                    <span>📹 CCTV / Cameras</span>
                 </button>
-                <button class="nav-item" data-view="simulator">
-                    <i class="fa-solid fa-flask text-peach"></i>
-                    <span>What-If Simulator</span>
-                </button>
-                <button class="nav-item" data-view="analytics">
+                <button class="nav-item operator-nav-item" data-view="analytics" style="display:none;">
                     <i class="fa-solid fa-chart-simple"></i>
-                    <span>Analytics</span>
+                    <span>📊 Operations Analytics</span>
                 </button>
+
+                <div class="nav-section-title operator-nav-item" style="display:none;">MY WORK</div>
+                <button class="nav-item operator-nav-item" data-view="settings" style="display:none;">
+                    <i class="fa-solid fa-gear"></i>
+                    <span>⚙️ Preferences & Security</span>
+                </button>
+
+                <!-- ADMIN NAVIGATION -->
+                <div class="nav-section-title admin-nav-item" style="display:none;">ADMINISTRATION</div>
                 <button class="nav-item admin-nav-item" data-view="administration" style="display:none;">
                     <i class="fa-solid fa-building-shield"></i>
                     <span>System Health & Admin</span>
@@ -1541,41 +1548,254 @@
                 <!-- VIEW 11: OPERATOR CONTROL DASHBOARD       -->
                 <!-- ========================================= -->
                 <div class="view-panel" id="view-operator-dashboard">
-                    <div class="analytics-layout">
-                        <div class="panel-header-row">
+                    <div class="admin-dashboard-container">
+                        <!-- 1. OPERATOR HEADER BAR -->
+                        <div class="op-header-bar" style="background:var(--bg-card);border:1px solid var(--border-color);border-radius:12px;padding:1.25rem;margin-bottom:1.5rem;display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:1rem;">
                             <div>
-                                <h2><i class="fa-solid fa-traffic-light text-peach"></i> Smart City Operator Control
-                                    Room</h2>
-                                <span class="subtitle">Traffic Signal Intelligence & Emergency Corridor Planning</span>
+                                <div style="display:flex;align-items:center;gap:0.75rem;">
+                                    <h2 style="margin:0;font-size:1.4rem;font-weight:700;color:var(--text-primary);"><i class="fa-solid fa-tower-broadcast text-peach"></i> TRAFFIC OPERATOR CONTROL CENTER</h2>
+                                    <span class="pill-badge" style="background:rgba(17,100,102,0.2);color:#116466;border:1px solid rgba(17,100,102,0.4);">
+                                        <i class="fa-solid fa-shield-halved"></i> AUTHORIZED OPERATOR SCOPE
+                                    </span>
+                                </div>
+                                <div style="margin-top:0.4rem;display:flex;flex-wrap:wrap;gap:1.5rem;font-size:0.85rem;color:var(--text-secondary);">
+                                    <span><strong>Operator:</strong> <span id="op-header-name">Authorized Operator</span></span>
+                                    <span><strong>Role:</strong> <span class="badge" style="background:rgba(17,100,102,0.2);color:var(--text-primary);">TRAFFIC_OPERATOR</span></span>
+                                    <span><strong>Status:</strong> <span id="op-header-status" style="color:#10b981;font-weight:600;">● ONLINE</span></span>
+                                    <span><strong>Shift:</strong> <span id="op-header-shift" class="badge" style="background:rgba(16,185,129,0.15);color:#10b981;">ACTIVE</span></span>
+                                    <span><strong>Assigned Area:</strong> <span id="op-header-area">Kanpur, UP (Zone 1 & 2)</span></span>
+                                </div>
+                            </div>
+                            <div style="display:flex;align-items:center;gap:1rem;font-size:0.8rem;color:var(--text-muted);">
+                                <span><i class="fa-solid fa-sync text-teal"></i> Sync: <span id="op-header-sync">Just now</span></span>
+                                <span><i class="fa-solid fa-wifi text-mint"></i> WS: <span id="op-header-ws" style="color:#10b981;">CONNECTED</span></span>
+                                <button class="btn btn-sm btn-outline-teal" id="btn-refresh-op-dashboard"><i class="fa-solid fa-rotate-right"></i> Refresh</button>
                             </div>
                         </div>
 
-                        <div class="admin-sections-grid">
-                            <div class="admin-card">
-                                <h3><i class="fa-solid fa-traffic-light"></i> Traffic Signal Intelligence</h3>
-                                <p class="subtitle" style="color:var(--text-muted);font-size:12px;">Simulation /
-                                    Recommendation Only — Real signal actions require explicit Operator Approval.</p>
-                                <div id="operator-signals-feed" class="signals-feed-container">
-                                    <!-- Injected via app.js -->
+                        <!-- 2. OPERATIONAL KPI CARDS -->
+                        <div class="kpi-bar" style="margin-bottom:1.5rem;display:grid;grid-template-columns:repeat(auto-fit, minmax(180px, 1fr));gap:1rem;">
+                            <div class="kpi-card" style="border-left:4px solid #ef4444;">
+                                <span class="kpi-label">ACTIVE INCIDENTS</span>
+                                <div class="kpi-value-row">
+                                    <h3 id="op-kpi-active-incidents" style="color:#ef4444;">0</h3>
+                                    <span class="kpi-trend trend-high"><i class="fa-solid fa-triangle-exclamation"></i> Live Area</span>
+                                </div>
+                                <span class="kpi-subtext">Verified & Active Ops</span>
+                            </div>
+                            <div class="kpi-card" style="border-left:4px solid #f59e0b;">
+                                <span class="kpi-label">PENDING REVIEW</span>
+                                <div class="kpi-value-row">
+                                    <h3 id="op-kpi-pending-review" style="color:#f59e0b;">0</h3>
+                                    <span class="kpi-trend trend-high"><i class="fa-solid fa-clock"></i> Action Needed</span>
+                                </div>
+                                <span class="kpi-subtext">Commuter Reports</span>
+                            </div>
+                            <div class="kpi-card" style="border-left:4px solid #f97316;">
+                                <span class="kpi-label">HIGH CONGESTION</span>
+                                <div class="kpi-value-row">
+                                    <h3 id="op-kpi-high-cong" style="color:#f97316;">0</h3>
+                                    <span class="kpi-trend trend-high"><i class="fa-solid fa-car-side"></i> Corridors</span>
+                                </div>
+                                <span class="kpi-subtext">TomTom Live Flow</span>
+                            </div>
+                            <div class="kpi-card" style="border-left:4px solid #8b5cf6;">
+                                <span class="kpi-label">ROAD CLOSURES</span>
+                                <div class="kpi-value-row">
+                                    <h3 id="op-kpi-closures" style="color:#8b5cf6;">0</h3>
+                                    <span class="kpi-trend trend-low"><i class="fa-solid fa-road-barrier"></i> Active</span>
+                                </div>
+                                <span class="kpi-subtext">Blocks & Diversions</span>
+                            </div>
+                            <div class="kpi-card" style="border-left:4px solid #06b6d4;">
+                                <span class="kpi-label">ACTIVE ALERTS</span>
+                                <div class="kpi-value-row">
+                                    <h3 id="op-kpi-active-alerts" style="color:#06b6d4;">0</h3>
+                                    <span class="kpi-trend trend-low"><i class="fa-solid fa-bullhorn"></i> Broadcasted</span>
+                                </div>
+                                <span class="kpi-subtext">Public Notifications</span>
+                            </div>
+                            <div class="kpi-card" style="border-left:4px solid #10b981;">
+                                <span class="kpi-label">ZONE STATUS</span>
+                                <div class="kpi-value-row">
+                                    <h3 id="op-kpi-zone-status" style="color:#10b981;font-size:1.1rem;margin-top:4px;">OPERATIONAL</h3>
+                                </div>
+                                <span class="kpi-subtext">Authorized Scope</span>
+                            </div>
+                        </div>
+
+                        <!-- 3. INCIDENT TRIAGE & ALERT COMPOSER GRID -->
+                        <div style="display:grid;grid-template-columns:2fr 1fr;gap:1.5rem;margin-bottom:1.5rem;" class="op-grid-responsive">
+                            <!-- INCIDENT TRIAGE CARD -->
+                            <div class="admin-card" style="margin:0;">
+                                <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem;">
+                                    <div>
+                                        <h3 style="margin:0;"><i class="fa-solid fa-triangle-exclamation text-peach"></i> INCIDENT TRIAGE & VERIFICATION</h3>
+                                        <span style="font-size:0.8rem;color:var(--text-muted);">Review commuter-reported incidents, verify live threats, or escalate to dispatch.</span>
+                                    </div>
+                                    <span class="pill-badge" style="background:rgba(239,68,68,0.15);color:#ef4444;border:1px solid rgba(239,68,68,0.3);">
+                                        <i class="fa-solid fa-shield-halved"></i> AUDIT LOGGED WORKFLOW
+                                    </span>
+                                </div>
+
+                                <!-- Triage Tabs -->
+                                <div class="admin-tab-bar" style="margin-bottom:1rem;">
+                                    <button class="admin-tab-btn active" data-op-tab="pending">Pending (<span id="op-tab-count-pending">0</span>)</button>
+                                    <button class="admin-tab-btn" data-op-tab="verified">Verified (<span id="op-tab-count-verified">0</span>)</button>
+                                    <button class="admin-tab-btn" data-op-tab="escalated">Escalated (<span id="op-tab-count-escalated">0</span>)</button>
+                                    <button class="admin-tab-btn" data-op-tab="rejected">Rejected (<span id="op-tab-count-rejected">0</span>)</button>
+                                    <button class="admin-tab-btn" data-op-tab="resolved">Resolved (<span id="op-tab-count-resolved">0</span>)</button>
+                                </div>
+
+                                <!-- Triage Table -->
+                                <div class="table-responsive" style="max-height:360px;overflow-y:auto;">
+                                    <table class="admin-table">
+                                        <thead>
+                                            <tr>
+                                                <th>Incident ID</th>
+                                                <th>Type</th>
+                                                <th>Location / Zone</th>
+                                                <th>Severity</th>
+                                                <th>Reported</th>
+                                                <th>Status</th>
+                                                <th>Actions</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody id="op-triage-table-body">
+                                            <tr>
+                                                <td colspan="7" class="text-center" style="padding:2rem;color:var(--text-muted);">Loading operational incidents...</td>
+                                            </tr>
+                                        </tbody>
+                                    </table>
                                 </div>
                             </div>
 
-                            <div class="admin-card">
-                                <h3><i class="fa-solid fa-truck-medical text-red"></i> Emergency Green Corridor</h3>
-                                <p class="subtitle">Plan priority bypass corridors for ambulances & emergency vehicles
+                            <!-- TRAFFIC ALERT COMPOSER CARD -->
+                            <div class="admin-card" style="margin:0;">
+                                <h3 style="margin:0 0 0.5rem 0;"><i class="fa-solid fa-bullhorn text-teal"></i> PUBLISH TRAFFIC ALERT</h3>
+                                <p style="font-size:0.8rem;color:var(--text-muted);margin-bottom:1rem;">Compose and broadcast real public traffic alerts to all commuters in affected area.</p>
+
+                                <div class="form-group" style="margin-bottom:0.75rem;">
+                                    <label style="font-size:0.8rem;">Alert Title</label>
+                                    <input type="text" id="op-alert-title" class="custom-input" placeholder="e.g. Severe Delay on Mall Road">
+                                </div>
+                                <div class="form-group" style="margin-bottom:0.75rem;">
+                                    <label style="font-size:0.8rem;">Affected Area / Corridor</label>
+                                    <input type="text" id="op-alert-location" class="custom-input" placeholder="e.g. Kanpur Central to Mall Road">
+                                </div>
+                                <div class="form-group" style="margin-bottom:0.75rem;">
+                                    <label style="font-size:0.8rem;">Severity Level</label>
+                                    <select id="op-alert-severity" class="custom-input">
+                                        <option value="MEDIUM">MEDIUM (Delay / Slow Traffic)</option>
+                                        <option value="HIGH">HIGH (Major Congestion / Diversion)</option>
+                                        <option value="CRITICAL">CRITICAL (Road Blocked / Emergency)</option>
+                                    </select>
+                                </div>
+                                <div class="form-group" style="margin-bottom:1rem;">
+                                    <label style="font-size:0.8rem;">Alert Message</label>
+                                    <textarea id="op-alert-message" class="custom-input" rows="3" placeholder="Provide clear advisory details for commuters..."></textarea>
+                                </div>
+                                <button class="btn btn-primary btn-block" id="btn-publish-op-alert">
+                                    <i class="fa-solid fa-paper-plane"></i> Publish Traffic Alert & Notify
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- 4. SIGNAL INTELLIGENCE & EMERGENCY CORRIDOR GRID -->
+                        <div style="display:grid;grid-template-columns:1fr 1fr;gap:1.5rem;margin-bottom:1.5rem;" class="op-grid-responsive">
+                            <!-- SIGNAL INTELLIGENCE CARD -->
+                            <div class="admin-card" style="margin:0;">
+                                <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:0.5rem;">
+                                    <h3 style="margin:0;"><i class="fa-solid fa-traffic-light text-amber"></i> TRAFFIC SIGNAL INTELLIGENCE</h3>
+                                    <span class="pill-badge" style="background:rgba(245,158,11,0.15);color:#f59e0b;border:1px solid rgba(245,158,11,0.3);font-size:0.7rem;">
+                                        <i class="fa-solid fa-flask"></i> SIMULATION / RECOMMENDATION ONLY
+                                    </span>
+                                </div>
+                                <p style="font-size:0.8rem;color:var(--text-muted);margin-bottom:1rem;">
+                                    AI green time optimization recommendations. Approval records recommendation for operational use (does NOT directly change physical signals).
                                 </p>
-                                <div class="form-group">
-                                    <label>Emergency Vehicle Location</label>
-                                    <input type="text" id="input-emerg-loc" class="custom-input"
-                                        value="Kanpur Central Hospital">
+                                <div id="op-signals-feed-container">
+                                    <div style="padding:1.5rem;text-align:center;color:var(--text-muted);">Loading signal recommendations...</div>
                                 </div>
-                                <div class="form-group">
-                                    <label>Destination Hospital / Incident</label>
-                                    <input type="text" id="input-emerg-dest" class="custom-input"
-                                        value="GSVM Medical College">
+                            </div>
+
+                            <!-- EMERGENCY CORRIDOR CARD -->
+                            <div class="admin-card" style="margin:0;">
+                                <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:0.5rem;">
+                                    <h3 style="margin:0;"><i class="fa-solid fa-truck-medical text-red"></i> EMERGENCY GREEN CORRIDOR</h3>
+                                    <span class="pill-badge" style="background:rgba(239,68,68,0.15);color:#ef4444;border:1px solid rgba(239,68,68,0.3);font-size:0.7rem;">
+                                        <i class="fa-solid fa-flask"></i> SIMULATION / RECOMMENDATION ONLY
+                                    </span>
                                 </div>
-                                <button class="btn btn-danger btn-block" id="btn-plan-emergency-corridor"><i
-                                        class="fa-solid fa-siren text-white"></i> Dispatch Emergency Corridor</button>
+                                <p style="font-size:0.8rem;color:var(--text-muted);margin-bottom:1rem;">
+                                    Plan priority bypass corridor recommendations for ambulances and emergency response units.
+                                </p>
+                                <div style="display:grid;grid-template-columns:1fr 1fr;gap:0.75rem;margin-bottom:0.75rem;">
+                                    <div class="form-group" style="margin:0;">
+                                        <label style="font-size:0.8rem;">Emergency Vehicle Location</label>
+                                        <input type="text" id="op-emerg-loc" class="custom-input" value="Kanpur Central Hospital">
+                                    </div>
+                                    <div class="form-group" style="margin:0;">
+                                        <label style="font-size:0.8rem;">Destination Hospital / Incident</label>
+                                        <input type="text" id="op-emerg-dest" class="custom-input" value="GSVM Medical College">
+                                    </div>
+                                </div>
+                                <button class="btn btn-danger btn-block" id="btn-create-emerg-plan" style="margin-bottom:1rem;">
+                                    <i class="fa-solid fa-siren text-white"></i> Create Emergency Corridor Recommendation
+                                </button>
+                                <div id="op-emerg-plan-output">
+                                    <!-- Emergency corridor output -->
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- 5. CCTV MONITORING & OPERATIONAL ACTIVITY GRID -->
+                        <div style="display:grid;grid-template-columns:1fr 1fr;gap:1.5rem;" class="op-grid-responsive">
+                            <!-- CCTV MONITORING CARD -->
+                            <div class="admin-card" style="margin:0;">
+                                <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:0.5rem;">
+                                    <h3 style="margin:0;"><i class="fa-solid fa-video text-teal"></i> AUTHORIZED CCTV & CAMERA MONITORING</h3>
+                                    <span class="pill-badge" style="background:rgba(17,100,102,0.15);color:#116466;border:1px solid rgba(17,100,102,0.3);font-size:0.7rem;">
+                                        <i class="fa-solid fa-eye"></i> DEMO / SIMULATION
+                                    </span>
+                                </div>
+                                <p style="font-size:0.8rem;color:var(--text-muted);margin-bottom:1rem;">
+                                    Authorized camera feeds for operational monitoring in assigned zone.
+                                </p>
+                                <div id="op-cctv-grid" style="display:grid;grid-template-columns:1fr 1fr;gap:0.75rem;">
+                                    <div style="background:rgba(0,0,0,0.4);border:1px solid var(--border-color);border-radius:8px;padding:1rem;text-align:center;">
+                                        <i class="fa-solid fa-video-slash text-muted" style="font-size:1.5rem;margin-bottom:0.5rem;"></i>
+                                        <div style="font-weight:600;font-size:0.85rem;">CAM-01 Civil Lines</div>
+                                        <span class="badge" style="background:rgba(16,185,129,0.15);color:#10b981;font-size:0.7rem;">ONLINE (DEMO)</span>
+                                    </div>
+                                    <div style="background:rgba(0,0,0,0.4);border:1px solid var(--border-color);border-radius:8px;padding:1rem;text-align:center;">
+                                        <i class="fa-solid fa-video-slash text-muted" style="font-size:1.5rem;margin-bottom:0.5rem;"></i>
+                                        <div style="font-weight:600;font-size:0.85rem;">CAM-02 Mall Road</div>
+                                        <span class="badge" style="background:rgba(16,185,129,0.15);color:#10b981;font-size:0.7rem;">ONLINE (DEMO)</span>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- MY OPERATIONAL ACTIVITY CARD -->
+                            <div class="admin-card" style="margin:0;">
+                                <h3 style="margin:0 0 0.5rem 0;"><i class="fa-solid fa-clipboard-list text-peach"></i> MY OPERATIONAL ACTIVITY LOG</h3>
+                                <p style="font-size:0.8rem;color:var(--text-muted);margin-bottom:1rem;">Real-time audit log of operational actions performed by authenticated operator.</p>
+                                <div class="table-responsive" style="max-height:220px;overflow-y:auto;">
+                                    <table class="admin-table">
+                                        <thead>
+                                            <tr>
+                                                <th>Time</th>
+                                                <th>Action</th>
+                                                <th>Details</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody id="op-activity-table-body">
+                                            <tr>
+                                                <td colspan="3" class="text-center" style="padding:1rem;color:var(--text-muted);">Loading activity log...</td>
+                                            </tr>
+                                        </tbody>
+                                    </table>
+                                </div>
                             </div>
                         </div>
                     </div>

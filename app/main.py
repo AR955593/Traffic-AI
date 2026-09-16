@@ -827,15 +827,79 @@ def report_incident(payload: IncidentPayload, user: dict = Depends(require_authe
 
     return {"status": "success", "message": "Incident report submitted for Operator review.", "incident": new_inc.to_dict()}
 
+@app.get("/api/v1/operator/dashboard")
+def get_operator_dashboard_overview(user: dict = Depends(require_operator_user)):
+    """Comprehensive real-time operator control center dashboard endpoint."""
+    all_incidents = [inc.to_dict() for inc in incident_manager.incidents.values()]
+    active_incidents = [i for i in all_incidents if i.get("status") in ["VERIFIED", "ACTIVE", "HIGH"]]
+    pending_incidents = [i for i in all_incidents if i.get("status") in ["UNVERIFIED", "PENDING_REVIEW", "PENDING"]]
+    
+    db = get_mongo_db()
+    published_alerts = list(db.traffic_alerts.find({}, {"_id": 0}).sort("created_at", -1).limit(10))
+    
+    # Calculate operational metrics
+    states = simulator._calculate_segment_states()
+    high_cong = sum(1 for s in states.values() if s.get("current_speed", 100) <= 40)
+    closures = sum(1 for i in all_incidents if i.get("type", "").lower() in ["road closure", "closure"])
+    
+    return {
+        "status": "success",
+        "operator": {
+            "name": user.get("name", "Traffic Operator"),
+            "email": user.get("email", ""),
+            "role": "TRAFFIC_OPERATOR",
+            "status": "ONLINE",
+            "shift": "ACTIVE",
+            "organization": user.get("organization", "Kanpur Traffic Management Authority"),
+            "assigned_city": user.get("city", "Kanpur, UP"),
+            "assigned_zones": user.get("assigned_zones", ["Zone 1 - Central Corridor", "Zone 2 - Mall Road"]),
+            "last_sync": datetime.now(timezone.utc).isoformat(),
+            "websocket": "CONNECTED"
+        },
+        "kpis": {
+            "active_incidents": len(active_incidents),
+            "pending_review": len(pending_incidents),
+            "high_congestion_corridors": high_cong,
+            "active_road_closures": closures,
+            "active_alerts": len(published_alerts),
+            "zone_status": "OPERATIONAL"
+        },
+        "recent_alerts": published_alerts[:5],
+        "pending_incidents": pending_incidents,
+        "active_incidents": active_incidents,
+        "disclaimer": "LIVE OPERATIONAL CONTROL CENTER — Authenticated Operator Scope"
+    }
+
 @app.get("/api/v1/operator/incidents")
 def get_operator_incidents(user: dict = Depends(require_operator_user)):
     """Traffic Operator endpoint to view all reported & active incidents for triage."""
     all_incidents = [inc.to_dict() for inc in incident_manager.incidents.values()]
-    return {"status": "success", "count": len(all_incidents), "incidents": all_incidents}
+    return {
+        "status": "success",
+        "count": len(all_incidents),
+        "pending": [inc for inc in all_incidents if inc.get("status") in ["UNVERIFIED", "PENDING_REVIEW", "PENDING"]],
+        "verified": [inc for inc in all_incidents if inc.get("status") == "VERIFIED"],
+        "escalated": [inc for inc in all_incidents if inc.get("status") == "ESCALATED"],
+        "rejected": [inc for inc in all_incidents if inc.get("status") == "REJECTED"],
+        "resolved": [inc for inc in all_incidents if inc.get("status") == "RESOLVED"],
+        "incidents": all_incidents
+    }
+
+@app.get("/api/v1/operator/incidents/{incident_id}")
+def get_operator_incident_detail(incident_id: str, user: dict = Depends(require_operator_user)):
+    """Get operational incident details (minimum necessary user information)."""
+    inc = incident_manager.incidents.get(incident_id)
+    if not inc:
+        raise HTTPException(status_code=404, detail="Incident not found.")
+    inc_data = inc.to_dict()
+    # Strip any potential sensitive user credentials/data
+    inc_data.pop("reporter_jwt", None)
+    inc_data.pop("reporter_password", None)
+    return {"status": "success", "incident": inc_data}
 
 @app.post("/api/v1/operator/incidents/verify")
 def verify_incident(req: VerifyIncidentRequest, user: dict = Depends(require_operator_user)):
-    """Traffic Operator verifies, updates status, or rejects a reported incident -> notifies Commuters."""
+    """Traffic Operator verifies, updates status, or resolves a reported incident -> notifies Commuters."""
     inc = incident_manager.incidents.get(req.incident_id)
     if not inc:
         raise HTTPException(status_code=404, detail="Incident not found.")
@@ -843,16 +907,13 @@ def verify_incident(req: VerifyIncidentRequest, user: dict = Depends(require_ope
     inc.status = req.status
     inc.updated_at = datetime.now(timezone.utc).isoformat()
 
-    # Sync status in MongoDB
     db = get_mongo_db()
     db.user_incidents.update_one(
         {"incident_id": req.incident_id},
         {"$set": {"status": req.status, "verified_by": user["id"], "public_note": req.public_note, "updated_at": inc.updated_at}}
     )
 
-    # Workflow Trigger: OPERATOR -> USER notification if verified/resolved
     if req.status in ["VERIFIED", "RESOLVED"]:
-        # Send public notification to all users
         commuters = db.users.find({"role": "USER"})
         for c in commuters:
             c_id = c.get("id") or str(c.get("_id"))
@@ -869,6 +930,51 @@ def verify_incident(req: VerifyIncidentRequest, user: dict = Depends(require_ope
     auth_manager.audit_logger.log_action("INCIDENT_VERIFIED", user.get("name", "Operator"), f"Incident {req.incident_id} marked as {req.status}")
     return {"status": "success", "message": f"Incident {req.incident_id} status updated to {req.status}.", "incident": inc.to_dict()}
 
+@app.post("/api/v1/operator/incidents/reject")
+def reject_incident(req: VerifyIncidentRequest, user: dict = Depends(require_operator_user)):
+    """Reject false or unverified incident report with audit logging."""
+    inc = incident_manager.incidents.get(req.incident_id)
+    if not inc:
+        raise HTTPException(status_code=404, detail="Incident not found.")
+
+    inc.status = "REJECTED"
+    inc.updated_at = datetime.now(timezone.utc).isoformat()
+
+    db = get_mongo_db()
+    db.user_incidents.update_one(
+        {"incident_id": req.incident_id},
+        {"$set": {"status": "REJECTED", "rejected_by": user["id"], "reason": req.public_note or "Unverified or invalid report", "updated_at": inc.updated_at}}
+    )
+
+    auth_manager.audit_logger.log_action("INCIDENT_REJECTED", user.get("name", "Operator"), f"Incident {req.incident_id} rejected. Reason: {req.public_note or 'Unverified'}")
+    return {"status": "success", "message": f"Incident {req.incident_id} rejected.", "incident": inc.to_dict()}
+
+@app.post("/api/v1/operator/incidents/escalate")
+def escalate_incident(req: VerifyIncidentRequest, user: dict = Depends(require_operator_user)):
+    """Escalate critical incident to higher operational / emergency dispatch level."""
+    inc = incident_manager.incidents.get(req.incident_id)
+    if not inc:
+        raise HTTPException(status_code=404, detail="Incident not found.")
+
+    inc.status = "ESCALATED"
+    inc.updated_at = datetime.now(timezone.utc).isoformat()
+
+    db = get_mongo_db()
+    db.user_incidents.update_one(
+        {"incident_id": req.incident_id},
+        {"$set": {"status": "ESCALATED", "escalated_by": user["id"], "updated_at": inc.updated_at}}
+    )
+
+    auth_manager.audit_logger.log_action("INCIDENT_ESCALATED", user.get("name", "Operator"), f"Incident {req.incident_id} escalated to Emergency Control")
+    return {"status": "success", "message": f"Incident {req.incident_id} escalated.", "incident": inc.to_dict()}
+
+@app.get("/api/v1/operator/alerts")
+def get_operator_alerts(user: dict = Depends(require_operator_user)):
+    """List published traffic alerts for operator management."""
+    db = get_mongo_db()
+    alerts = list(db.traffic_alerts.find({}, {"_id": 0}).sort("created_at", -1))
+    return {"status": "success", "count": len(alerts), "alerts": alerts}
+
 @app.post("/api/v1/operator/alerts/publish")
 def publish_traffic_alert(req: PublishAlertRequest, user: dict = Depends(require_operator_user)):
     """Traffic Operator composes and publishes a public traffic alert -> creates real notification for commuters."""
@@ -876,7 +982,6 @@ def publish_traffic_alert(req: PublishAlertRequest, user: dict = Depends(require
     now_str = datetime.now(timezone.utc).isoformat()
     alert_id = f"ALT-{uuid.uuid4().hex[:6].upper()}"
 
-    # Store alert in MongoDB
     db.traffic_alerts.insert_one({
         "id": alert_id,
         "title": req.title,
@@ -888,7 +993,6 @@ def publish_traffic_alert(req: PublishAlertRequest, user: dict = Depends(require
         "created_at": now_str
     })
 
-    # Workflow Trigger: OPERATOR -> USER broadcast notifications
     commuters = db.users.find({"role": "USER"})
     notif_count = 0
     for c in commuters:
@@ -906,6 +1010,116 @@ def publish_traffic_alert(req: PublishAlertRequest, user: dict = Depends(require
 
     auth_manager.audit_logger.log_action("TRAFFIC_ALERT_PUBLISHED", user.get("name", "Operator"), f"Alert published: {req.title} for {req.location}")
     return {"status": "success", "message": f"Public traffic alert published to {notif_count} commuters.", "alert_id": alert_id}
+
+@app.get("/api/v1/operator/signals")
+def get_operator_signals(user: dict = Depends(require_operator_user)):
+    """Signal Intelligence recommendations with explicit SIMULATION status."""
+    return {
+        "status": "success",
+        "badge": "SIMULATION / RECOMMENDATION ONLY",
+        "note": "AI signal timing optimizations — recommendations require operator approval for operational use.",
+        "signals": [
+            {
+                "intersection_id": "INT-01-CIVIL-LINES",
+                "name": "Civil Lines / Mall Road Junction",
+                "direction": "Northbound / Eastbound",
+                "traffic_demand": "HIGH",
+                "queue_meters": 210,
+                "current_phase": "Green (35s)",
+                "recommended_green_sec": 55,
+                "reason": "Queue length exceeded threshold by 65m",
+                "confidence": 0.92,
+                "status": "Recommendation Pending Approval"
+            },
+            {
+                "intersection_id": "INT-02-SWAROOP-NAGAR",
+                "name": "Swaroop Nagar Crossing",
+                "direction": "Southbound",
+                "traffic_demand": "MEDIUM",
+                "queue_meters": 85,
+                "current_phase": "Green (25s)",
+                "recommended_green_sec": 35,
+                "reason": "Flow stabilization recommendation",
+                "confidence": 0.88,
+                "status": "Optimal Timing"
+            }
+        ]
+    }
+
+@app.post("/api/v1/operator/signals/approve")
+def approve_signal_recommendation(req: SignalApprovalRequest, user: dict = Depends(require_operator_user)):
+    """Approve signal timing recommendation for operational use."""
+    auth_manager.audit_logger.log_action("SIGNAL_APPROVAL", user.get("name", "Operator"), f"Approved signal timing recommendation for {req.intersection_id}")
+    return {
+        "status": "success",
+        "badge": "SIMULATION / RECOMMENDATION ONLY",
+        "message": f"Signal timing recommendation for {req.intersection_id} approved for operational use."
+    }
+
+@app.get("/api/v1/operator/emergency-corridors")
+def get_operator_emergency_corridors(user: dict = Depends(require_operator_user)):
+    """Emergency Green Corridor plans with explicit SIMULATION status."""
+    return {
+        "status": "success",
+        "badge": "SIMULATION / RECOMMENDATION ONLY",
+        "corridors": [
+            {
+                "corridor_id": "EMG-101",
+                "vehicle": "AMBULANCE-04",
+                "origin": "Kanpur Central Hospital",
+                "destination": "GSVM Medical College",
+                "status": "RECOMMENDATION GENERATED",
+                "estimated_travel_time_min": 8.5,
+                "time_saved_min": 4.2,
+                "intersections": ["INT-01-CIVIL-LINES", "INT-04-GT-ROAD"]
+            }
+        ]
+    }
+
+@app.post("/api/v1/operator/emergency-corridors/plan")
+def plan_operator_emergency_corridor(req: Dict[str, Any], user: dict = Depends(require_operator_user)):
+    """Generate Emergency Corridor recommendation plan."""
+    origin = req.get("origin", "Kanpur Hospital")
+    destination = req.get("destination", "GSVM Trauma Center")
+    plan_id = f"EMG-{uuid.uuid4().hex[:4].upper()}"
+    auth_manager.audit_logger.log_action("EMERGENCY_CORRIDOR_PLANNED", user.get("name", "Operator"), f"Emergency Corridor recommendation created: {origin} -> {destination}")
+    return {
+        "status": "success",
+        "badge": "SIMULATION / RECOMMENDATION ONLY",
+        "message": f"Emergency Green Corridor Plan {plan_id} generated.",
+        "plan": {
+            "corridor_id": plan_id,
+            "origin": origin,
+            "destination": destination,
+            "estimated_eta": "9.2 mins",
+            "priority_level": "CRITICAL",
+            "recommended_intersections": ["INT-01", "INT-03", "INT-07"]
+        }
+    }
+
+@app.get("/api/v1/operator/cctv")
+def get_operator_cctv(user: dict = Depends(require_operator_user)):
+    """Authorized CCTV camera feeds list."""
+    return {
+        "status": "success",
+        "badge": "DEMO / SIMULATION",
+        "note": "Authorized live camera feeds simulated for operations control room overview.",
+        "cameras": [
+            {"id": "CAM-01", "location": "Civil Lines Crossing North", "status": "ONLINE (DEMO)", "type": "PTZ Optical 4K"},
+            {"id": "CAM-02", "location": "Mall Road Interchange", "status": "ONLINE (DEMO)", "type": "Fixed Traffic Cam"},
+            {"id": "CAM-03", "location": "GT Road Bypass Sector 4", "status": "ONLINE (DEMO)", "type": "Thermal Flow Sensor"},
+            {"id": "CAM-04", "location": "Swaroop Nagar Junction", "status": "CCTV STREAM UNAVAILABLE", "type": "Optical Camera"}
+        ]
+    }
+
+@app.get("/api/v1/operator/activity")
+def get_operator_activity(user: dict = Depends(require_operator_user)):
+    """Operational activity log for authenticated operator."""
+    logs = auth_manager.audit_logger.get_logs(limit=20)
+    user_logs = [l for l in logs if l.get("user") == user.get("name")]
+    if not user_logs:
+        user_logs = logs[:10]
+    return {"status": "success", "count": len(user_logs), "activity": user_logs}
 
 @app.get("/api/v1/traffic/segments/{segment_id}")
 def get_segment_detail(segment_id: str, model_choice: str = "Gradient_Boosting"):

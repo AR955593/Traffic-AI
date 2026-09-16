@@ -1025,6 +1025,8 @@ function switchView(viewName) {
         loadCCTVFeeds();
     } else if (viewName === 'nearby-services') {
         loadNearbyServices();
+    } else if (viewName === 'operator-dashboard') {
+        fetchOperatorDashboardData();
     } else if (viewName === 'signals') {
         loadSignalsView();
     } else if (viewName === 'saved-places') {
@@ -4044,19 +4046,32 @@ function updateHeaderUserDisplay() {
         if (nameEl) nameEl.textContent = 'Sign In';
         if (roleEl) roleEl.textContent = 'Guest User';
         document.querySelectorAll('.admin-nav-item').forEach(el => el.style.display = 'none');
+        document.querySelectorAll('.operator-nav-item').forEach(el => el.style.display = 'none');
+        document.querySelectorAll('.commuter-nav-item').forEach(el => el.style.display = '');
         return;
     }
 
+    const role = (state.currentUser.role || '').toUpperCase();
     const initials = state.currentUser.initials || getInitialsFromName(state.currentUser.name);
     if (avatarEl) avatarEl.textContent = initials;
     if (nameEl) nameEl.textContent = state.currentUser.name || 'User';
-    if (roleEl) roleEl.textContent = state.currentUser.role_display || state.currentUser.role || 'Traffic User';
+    if (roleEl) roleEl.textContent = state.currentUser.role_display || role;
 
-    // Show/hide Admin panel nav item
-    const adminNavItems = document.querySelectorAll('.admin-nav-item');
-    adminNavItems.forEach(el => {
-        el.style.display = (state.currentUser && state.currentUser.role === 'ADMIN') ? 'flex' : 'none';
-    });
+    // Role-based Sidebar Navigation Toggling
+    if (role === 'TRAFFIC_OPERATOR' || role === 'OPERATOR') {
+        document.querySelectorAll('.commuter-nav-item').forEach(el => el.style.display = 'none');
+        document.querySelectorAll('.admin-nav-item').forEach(el => el.style.display = 'none');
+        document.querySelectorAll('.operator-nav-item').forEach(el => el.style.display = 'flex');
+    } else if (role === 'ADMIN' || role === 'SUPER_ADMIN') {
+        document.querySelectorAll('.admin-nav-item').forEach(el => el.style.display = 'flex');
+        document.querySelectorAll('.operator-nav-item').forEach(el => el.style.display = 'flex');
+        document.querySelectorAll('.commuter-nav-item').forEach(el => el.style.display = 'flex');
+    } else {
+        // Standard Commuter USER
+        document.querySelectorAll('.commuter-nav-item').forEach(el => el.style.display = 'flex');
+        document.querySelectorAll('.operator-nav-item').forEach(el => el.style.display = 'none');
+        document.querySelectorAll('.admin-nav-item').forEach(el => el.style.display = 'none');
+    }
 }
 
 async function loadUserProfileData() {
@@ -4527,60 +4542,371 @@ function initWhatIfSimulator() {
 // =========================================================
 // 18. OPERATOR DASHBOARD & SIGNALS (PHASE 22-24)
 // =========================================================
+// =========================================================
+// 18. OPERATOR CONTROL CENTER LOGIC & RBAC NAVIGATION
+// =========================================================
+let currentOpTriageTab = 'pending';
+
 function initOperatorDashboard() {
-    const feed = document.getElementById('operator-signals-feed');
-
-    const loadSignals = async () => {
-        try {
-            const res = await fetch(`${API_BASE}/api/v1/signals/recommendations`);
-            if (res.ok) {
-                const data = await res.json();
-                if (feed) {
-                    feed.innerHTML = (data.recommendations || []).map(sig => `
-                        <div class="signal-item-card" style="background:var(--bg-card-subtle);border:1px solid var(--border-color);padding:12px;border-radius:var(--radius-md);margin-bottom:10px;">
-                            <div style="display:flex;justify-content:space-between;align-items:center;">
-                                <strong>${sig.intersection_name} (${sig.direction})</strong>
-                                <span class="badge-status badge-mod">${sig.status}</span>
-                            </div>
-                            <div style="font-size:11px;color:var(--text-dim);margin:6px 0;">Queue: ${sig.queue_meters}m · Recommended Green: ${sig.recommended_green_sec}s</div>
-                            <button class="btn btn-sm btn-primary" onclick="approveSignalAllocation('${sig.intersection_id}')">
-                                <i class="fa-solid fa-check"></i> Operator Approve
-                            </button>
-                        </div>
-                    `).join('');
-                }
-            }
-        } catch (err) {}
-    };
-
-    loadSignals();
-
-    document.getElementById('btn-plan-emergency-corridor')?.addEventListener('click', () => {
-        showToast('Emergency Green Corridor dispatched! Priority signals activated under Operator authorization.', 'success');
+    // 1. Tab event listeners
+    document.querySelectorAll('.admin-tab-btn[data-op-tab]').forEach(btn => {
+        btn.addEventListener('click', () => {
+            document.querySelectorAll('.admin-tab-btn[data-op-tab]').forEach(b => b.classList.remove('active'));
+            btn.classList.add('active');
+            currentOpTriageTab = btn.dataset.opTab;
+            fetchOperatorIncidents();
+        });
     });
+
+    // 2. Refresh button listener
+    document.getElementById('btn-refresh-op-dashboard')?.addEventListener('click', () => {
+        showToast('Refreshing Operator Control Center data...', 'info');
+        fetchOperatorDashboardData();
+    });
+
+    // 3. Publish alert listener
+    document.getElementById('btn-publish-op-alert')?.addEventListener('click', handlePublishOpAlert);
+
+    // 4. Create emergency corridor plan listener
+    document.getElementById('btn-create-emerg-plan')?.addEventListener('click', handleCreateOpEmergencyPlan);
+
+    // Initial load
+    fetchOperatorDashboardData();
 }
 
-window.approveSignalAllocation = async function(intersectionId) {
+async function fetchOperatorDashboardData() {
     const token = localStorage.getItem('traffic_ai_token') || localStorage.getItem('trafficai_token');
+    const authHeader = token ? { 'Authorization': `Bearer ${token}` } : {};
+
     try {
-        const res = await fetch(`${API_BASE}/api/v1/signals/approve`, {
+        // 1. Fetch Operator Overview & KPIs
+        const resDash = await fetch(`${API_BASE}/api/v1/operator/dashboard`, { headers: authHeader });
+        if (resDash.ok) {
+            const data = await resDash.json();
+            const op = data.operator || {};
+            const kpis = data.kpis || {};
+
+            // Update Header Status
+            if (document.getElementById('op-header-name')) document.getElementById('op-header-name').textContent = op.name || 'Operator';
+            if (document.getElementById('op-header-status')) document.getElementById('op-header-status').textContent = `● ${op.status || 'ONLINE'}`;
+            if (document.getElementById('op-header-shift')) document.getElementById('op-header-shift').textContent = op.shift || 'ACTIVE';
+            if (document.getElementById('op-header-area')) document.getElementById('op-header-area').textContent = `${op.assigned_city || 'Kanpur, UP'} (${(op.assigned_zones || []).join(', ')})`;
+            if (document.getElementById('op-header-sync')) document.getElementById('op-header-sync').textContent = new Date().toLocaleTimeString();
+
+            // Update KPI Cards
+            if (document.getElementById('op-kpi-active-incidents')) document.getElementById('op-kpi-active-incidents').textContent = kpis.active_incidents ?? 0;
+            if (document.getElementById('op-kpi-pending-review')) document.getElementById('op-kpi-pending-review').textContent = kpis.pending_review ?? 0;
+            if (document.getElementById('op-kpi-high-cong')) document.getElementById('op-kpi-high-cong').textContent = kpis.high_congestion_corridors ?? 0;
+            if (document.getElementById('op-kpi-closures')) document.getElementById('op-kpi-closures').textContent = kpis.active_road_closures ?? 0;
+            if (document.getElementById('op-kpi-active-alerts')) document.getElementById('op-kpi-active-alerts').textContent = kpis.active_alerts ?? 0;
+            if (document.getElementById('op-kpi-zone-status')) document.getElementById('op-kpi-zone-status').textContent = kpis.zone_status || 'OPERATIONAL';
+        }
+
+        // 2. Fetch Incidents for Triage
+        fetchOperatorIncidents();
+
+        // 3. Fetch Signal Intelligence
+        fetchOperatorSignals();
+
+        // 4. Fetch CCTV Streams
+        fetchOperatorCCTV();
+
+        // 5. Fetch Operator Activity
+        fetchOperatorActivity();
+
+    } catch (err) {
+        console.error('Error fetching operator dashboard:', err);
+    }
+}
+
+async function fetchOperatorIncidents() {
+    const token = localStorage.getItem('traffic_ai_token') || localStorage.getItem('trafficai_token');
+    const authHeader = token ? { 'Authorization': `Bearer ${token}` } : {};
+
+    try {
+        const res = await fetch(`${API_BASE}/api/v1/operator/incidents`, { headers: authHeader });
+        if (!res.ok) return;
+
+        const data = await res.json();
+        const pending = data.pending || [];
+        const verified = data.verified || [];
+        const escalated = data.escalated || [];
+        const rejected = data.rejected || [];
+        const resolved = data.resolved || [];
+
+        // Update tab counts
+        if (document.getElementById('op-tab-count-pending')) document.getElementById('op-tab-count-pending').textContent = pending.length;
+        if (document.getElementById('op-tab-count-verified')) document.getElementById('op-tab-count-verified').textContent = verified.length;
+        if (document.getElementById('op-tab-count-escalated')) document.getElementById('op-tab-count-escalated').textContent = escalated.length;
+        if (document.getElementById('op-tab-count-rejected')) document.getElementById('op-tab-count-rejected').textContent = rejected.length;
+        if (document.getElementById('op-tab-count-resolved')) document.getElementById('op-tab-count-resolved').textContent = resolved.length;
+
+        let activeList = pending;
+        if (currentOpTriageTab === 'verified') activeList = verified;
+        else if (currentOpTriageTab === 'escalated') activeList = escalated;
+        else if (currentOpTriageTab === 'rejected') activeList = rejected;
+        else if (currentOpTriageTab === 'resolved') activeList = resolved;
+
+        const tbody = document.getElementById('op-triage-table-body');
+        if (!tbody) return;
+
+        if (activeList.length === 0) {
+            tbody.innerHTML = `<tr><td colspan="7" class="text-center" style="padding:2rem;color:var(--text-muted);">No incidents found in tab '${currentOpTriageTab}'.</td></tr>`;
+            return;
+        }
+
+        tbody.innerHTML = activeList.map(inc => {
+            const timeStr = inc.timestamp ? new Date(inc.timestamp).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}) : 'Recently';
+            const sevBadge = inc.severity === 'Severe' || inc.severity === 'HIGH' ?
+                '<span class="badge" style="background:rgba(239,68,68,0.2);color:#ef4444;">HIGH</span>' :
+                '<span class="badge" style="background:rgba(245,158,11,0.2);color:#f59e0b;">MEDIUM</span>';
+
+            let actionBtns = '';
+            if (currentOpTriageTab === 'pending') {
+                actionBtns = `
+                    <button class="btn btn-sm btn-success btn-verify-inc" data-id="${inc.id || inc.incident_id}"><i class="fa-solid fa-check"></i> Verify</button>
+                    <button class="btn btn-sm btn-outline-danger btn-reject-inc" data-id="${inc.id || inc.incident_id}"><i class="fa-solid fa-xmark"></i> Reject</button>
+                    <button class="btn btn-sm btn-outline-warning btn-escalate-inc" data-id="${inc.id || inc.incident_id}"><i class="fa-solid fa-arrow-up"></i> Escalate</button>
+                `;
+            } else if (currentOpTriageTab === 'verified') {
+                actionBtns = `
+                    <button class="btn btn-sm btn-outline-success btn-resolve-inc" data-id="${inc.id || inc.incident_id}"><i class="fa-solid fa-circle-check"></i> Mark Resolved</button>
+                `;
+            } else {
+                actionBtns = `<span style="font-size:0.8rem;color:var(--text-muted);">No action</span>`;
+            }
+
+            return `
+                <tr>
+                    <td><strong>${inc.id || inc.incident_id || 'INC-00'}</strong></td>
+                    <td>${inc.type || inc.incident_type || 'Incident'}</td>
+                    <td>${inc.location || inc.title || 'Location Unspecified'}</td>
+                    <td>${sevBadge}</td>
+                    <td>${timeStr}</td>
+                    <td><span class="badge" style="background:rgba(17,100,102,0.2);color:var(--text-primary);">${inc.status || 'UNVERIFIED'}</span></td>
+                    <td><div style="display:flex;gap:0.4rem;">${actionBtns}</div></td>
+                </tr>
+            `;
+        }).join('');
+
+        // Attach event listeners for triage buttons
+        tbody.querySelectorAll('.btn-verify-inc').forEach(btn => {
+            btn.addEventListener('click', () => handleTriageAction('verify', btn.dataset.id));
+        });
+        tbody.querySelectorAll('.btn-reject-inc').forEach(btn => {
+            btn.addEventListener('click', () => handleTriageAction('reject', btn.dataset.id));
+        });
+        tbody.querySelectorAll('.btn-escalate-inc').forEach(btn => {
+            btn.addEventListener('click', () => handleTriageAction('escalate', btn.dataset.id));
+        });
+        tbody.querySelectorAll('.btn-resolve-inc').forEach(btn => {
+            btn.addEventListener('click', () => handleTriageAction('resolve', btn.dataset.id));
+        });
+
+    } catch (err) {
+        console.error('Error fetching operator incidents:', err);
+    }
+}
+
+async function handleTriageAction(action, incidentId) {
+    const token = localStorage.getItem('traffic_ai_token') || localStorage.getItem('trafficai_token');
+    const authHeader = token ? { 'Authorization': `Bearer ${token}` } : {};
+
+    let endpoint = '/api/v1/operator/incidents/verify';
+    let statusVal = 'VERIFIED';
+    if (action === 'reject') {
+        endpoint = '/api/v1/operator/incidents/reject';
+        statusVal = 'REJECTED';
+    } else if (action === 'escalate') {
+        endpoint = '/api/v1/operator/incidents/escalate';
+        statusVal = 'ESCALATED';
+    } else if (action === 'resolve') {
+        endpoint = '/api/v1/operator/incidents/verify';
+        statusVal = 'RESOLVED';
+    }
+
+    try {
+        const res = await fetch(`${API_BASE}${endpoint}`, {
             method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                ...(token ? { 'Authorization': `Bearer ${token}` } : {})
-            },
-            body: JSON.stringify({ intersection_id: intersectionId, action: 'APPROVE_ALLOCATION' })
+            headers: { 'Content-Type': 'application/json', ...authHeader },
+            body: JSON.stringify({ incident_id: incidentId, status: statusVal, public_note: `Operator triage action: ${action}` })
         });
         if (res.ok) {
             const data = await res.json();
-            showToast(data.message, 'success');
+            showToast(data.message || `Incident action completed!`, 'success');
+            fetchOperatorDashboardData();
         } else {
-            showToast('Operator authorization required to approve signals.', 'warning');
+            showToast(`Error executing incident triage action.`, 'error');
         }
     } catch (err) {
-        showToast('Error sending signal approval', 'error');
+        showToast(`Failed to connect to operator API`, 'error');
     }
-};
+}
+
+async function handlePublishOpAlert() {
+    const token = localStorage.getItem('traffic_ai_token') || localStorage.getItem('trafficai_token');
+    const authHeader = token ? { 'Authorization': `Bearer ${token}` } : {};
+
+    const title = document.getElementById('op-alert-title')?.value?.trim();
+    const location = document.getElementById('op-alert-location')?.value?.trim();
+    const severity = document.getElementById('op-alert-severity')?.value;
+    const message = document.getElementById('op-alert-message')?.value?.trim();
+
+    if (!title || !message) {
+        showToast('Please enter alert title and advisory message.', 'warning');
+        return;
+    }
+
+    try {
+        const res = await fetch(`${API_BASE}/api/v1/operator/alerts/publish`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', ...authHeader },
+            body: JSON.stringify({ title, location, severity, message })
+        });
+        if (res.ok) {
+            const data = await res.json();
+            showToast(data.message || 'Traffic alert published successfully!', 'success');
+            if (document.getElementById('op-alert-title')) document.getElementById('op-alert-title').value = '';
+            if (document.getElementById('op-alert-location')) document.getElementById('op-alert-location').value = '';
+            if (document.getElementById('op-alert-message')) document.getElementById('op-alert-message').value = '';
+            fetchOperatorDashboardData();
+        } else {
+            showToast('Failed to publish traffic alert.', 'error');
+        }
+    } catch (err) {
+        showToast('Error connecting to operator alert API.', 'error');
+    }
+}
+
+async function handleCreateOpEmergencyPlan() {
+    const token = localStorage.getItem('traffic_ai_token') || localStorage.getItem('trafficai_token');
+    const authHeader = token ? { 'Authorization': `Bearer ${token}` } : {};
+
+    const origin = document.getElementById('op-emerg-loc')?.value?.trim();
+    const destination = document.getElementById('op-emerg-dest')?.value?.trim();
+
+    try {
+        const res = await fetch(`${API_BASE}/api/v1/operator/emergency-corridors/plan`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', ...authHeader },
+            body: JSON.stringify({ origin, destination })
+        });
+        if (res.ok) {
+            const data = await res.json();
+            const plan = data.plan || {};
+            const out = document.getElementById('op-emerg-plan-output');
+            if (out) {
+                out.innerHTML = `
+                    <div style="background:var(--bg-card-subtle);border:1px solid rgba(239,68,68,0.4);border-radius:8px;padding:0.75rem;margin-top:0.5rem;">
+                        <div style="display:flex;justify-content:space-between;align-items:center;">
+                            <strong style="color:#ef4444;">${plan.corridor_id} (${data.badge})</strong>
+                            <span class="badge" style="background:rgba(239,68,68,0.2);color:#ef4444;">${plan.priority_level}</span>
+                        </div>
+                        <div style="font-size:0.8rem;color:var(--text-secondary);margin:0.25rem 0;">
+                            <strong>Route:</strong> ${plan.origin} ➔ ${plan.destination}<br>
+                            <strong>Est. ETA:</strong> ${plan.estimated_eta} | <strong>Recommended Intersections:</strong> ${(plan.recommended_intersections || []).join(', ')}
+                        </div>
+                        <span style="font-size:0.7rem;color:var(--text-muted);"><i class="fa-solid fa-info-circle"></i> ${data.message}</span>
+                    </div>
+                `;
+            }
+            showToast('Emergency Corridor recommendation plan generated!', 'success');
+        }
+    } catch (err) {}
+}
+
+async function fetchOperatorSignals() {
+    const token = localStorage.getItem('traffic_ai_token') || localStorage.getItem('trafficai_token');
+    const authHeader = token ? { 'Authorization': `Bearer ${token}` } : {};
+
+    try {
+        const res = await fetch(`${API_BASE}/api/v1/operator/signals`, { headers: authHeader });
+        if (!res.ok) return;
+        const data = await res.json();
+        const container = document.getElementById('op-signals-feed-container');
+        if (!container) return;
+
+        const signals = data.signals || [];
+        container.innerHTML = signals.map(sig => `
+            <div style="background:var(--bg-card-subtle);border:1px solid var(--border-color);padding:0.75rem;border-radius:8px;margin-bottom:0.5rem;">
+                <div style="display:flex;justify-content:space-between;align-items:center;">
+                    <strong>${sig.name}</strong>
+                    <span class="badge" style="background:rgba(245,158,11,0.2);color:#f59e0b;">${sig.status}</span>
+                </div>
+                <div style="font-size:0.75rem;color:var(--text-muted);margin:0.25rem 0;">
+                    Queue: ${sig.queue_meters}m | Recommended Green: ${sig.recommended_green_sec}s | Reason: ${sig.reason}
+                </div>
+                <button class="btn btn-sm btn-outline-teal btn-approve-sig" data-id="${sig.intersection_id}">
+                    <i class="fa-solid fa-check"></i> Approve Recommendation for Operational Use
+                </button>
+            </div>
+        `).join('');
+
+        container.querySelectorAll('.btn-approve-sig').forEach(btn => {
+            btn.addEventListener('click', async () => {
+                const intersectionId = btn.dataset.id;
+                const approveRes = await fetch(`${API_BASE}/api/v1/operator/signals/approve`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', ...authHeader },
+                    body: JSON.stringify({ intersection_id: intersectionId, action: 'APPROVE_RECOMMENDATION' })
+                });
+                if (approveRes.ok) {
+                    const resData = await approveRes.json();
+                    showToast(resData.message || 'Signal recommendation approved!', 'success');
+                }
+            });
+        });
+    } catch (err) {}
+}
+
+async function fetchOperatorCCTV() {
+    const token = localStorage.getItem('traffic_ai_token') || localStorage.getItem('trafficai_token');
+    const authHeader = token ? { 'Authorization': `Bearer ${token}` } : {};
+
+    try {
+        const res = await fetch(`${API_BASE}/api/v1/operator/cctv`, { headers: authHeader });
+        if (!res.ok) return;
+        const data = await res.json();
+        const grid = document.getElementById('op-cctv-grid');
+        if (!grid) return;
+
+        const cams = data.cameras || [];
+        grid.innerHTML = cams.map(cam => `
+            <div style="background:rgba(0,0,0,0.4);border:1px solid var(--border-color);border-radius:8px;padding:0.75rem;text-align:center;">
+                <i class="fa-solid fa-video-slash text-teal" style="font-size:1.25rem;margin-bottom:0.25rem;"></i>
+                <div style="font-weight:600;font-size:0.8rem;">${cam.id} - ${cam.location}</div>
+                <span class="badge" style="background:rgba(16,185,129,0.15);color:#10b981;font-size:0.65rem;">${cam.status}</span>
+            </div>
+        `).join('');
+    } catch (err) {}
+}
+
+async function fetchOperatorActivity() {
+    const token = localStorage.getItem('traffic_ai_token') || localStorage.getItem('trafficai_token');
+    const authHeader = token ? { 'Authorization': `Bearer ${token}` } : {};
+
+    try {
+        const res = await fetch(`${API_BASE}/api/v1/operator/activity`, { headers: authHeader });
+        if (!res.ok) return;
+        const data = await res.json();
+        const tbody = document.getElementById('op-activity-table-body');
+        if (!tbody) return;
+
+        const activity = data.activity || [];
+        if (activity.length === 0) {
+            tbody.innerHTML = `<tr><td colspan="3" class="text-center" style="padding:1rem;color:var(--text-muted);">No activity recorded yet.</td></tr>`;
+            return;
+        }
+
+        tbody.innerHTML = activity.map(act => `
+            <tr>
+                <td style="font-size:0.75rem;color:var(--text-muted);">${new Date(act.timestamp || Date.now()).toLocaleTimeString()}</td>
+                <td><strong style="font-size:0.8rem;">${act.action || 'ACTION'}</strong></td>
+                <td style="font-size:0.75rem;">${act.details || act.user || ''}</td>
+            </tr>
+        `).join('');
+    } catch (err) {}
+}
 
 // =========================================================
 // 19. CCTV CAMERA GRID & CV TELEMETRY
