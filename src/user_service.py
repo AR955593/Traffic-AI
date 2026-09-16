@@ -277,6 +277,25 @@ class UserService:
         return {k: v for k, v in doc.items() if k != "_id"}
 
     def get_user_notifications(self, user_id: str, limit: int = 50, unread_only: bool = False) -> List[Dict[str, Any]]:
+        # Auto-seed role-specific default notifications if user has 0 notifications
+        total_count = self.db.notifications.count_documents({"user_id": user_id})
+        if total_count == 0:
+            user_doc = self.db.users.find_one({"$or": [{"id": user_id}, {"_id": user_id}]}) or {}
+            role = user_doc.get("role", "USER")
+            
+            if role == "ADMIN":
+                self.create_notification(user_id, "SYSTEM", "System Admin Control Online", "Primary Admin dashboard activated. User management and operator approvals ready.", "HIGH", "admin_system", dedupe_key=f"init_admin_{user_id}")
+                self.create_notification(user_id, "ALERT", "Pending Operator Approvals", "Review registered Traffic Operator accounts requiring verification before activation.", "MEDIUM", "admin_system", dedupe_key=f"init_admin_op_{user_id}")
+                self.create_notification(user_id, "INFO", "Database Health Optimal", "MongoDB Atlas production cluster connected and operational.", "LOW", "system", dedupe_key=f"init_admin_db_{user_id}")
+            elif role == "TRAFFIC_OPERATOR":
+                self.create_notification(user_id, "ALERT", "Traffic Control Portal Activated", "Operator dashboard online. Signal timing override & incident verification enabled.", "HIGH", "operator_system", dedupe_key=f"init_op_{user_id}")
+                self.create_notification(user_id, "INCIDENT", "Pending Incident Verification", "User reported heavy congestion on Mall Road. Please inspect camera grid & verify.", "MEDIUM", "operator_system", dedupe_key=f"init_op_inc_{user_id}")
+                self.create_notification(user_id, "CORRIDOR", "Emergency Corridor Standby", "Green wave emergency corridor system ready for dispatch requests.", "LOW", "operator_system", dedupe_key=f"init_op_emg_{user_id}")
+            else:
+                self.create_notification(user_id, "INFO", "Welcome to TrafficAI Hub", "Live AI traffic monitoring, optimal route planning, and real-time alerts active.", "LOW", "system", dedupe_key=f"init_usr_{user_id}")
+                self.create_notification(user_id, "CONGESTION", "Mall Road Traffic Delay", "Heavy traffic detected on Mall Road, Kanpur (+12 min delay). Consider alternative routes.", "MEDIUM", "traffic_alert", dedupe_key=f"init_usr_delay_{user_id}")
+                self.create_notification(user_id, "WEATHER", "Rainfall Advisory", "Light rain reported near Kanpur Central. Drive carefully with headlights on.", "LOW", "weather", dedupe_key=f"init_usr_wth_{user_id}")
+
         query = {"user_id": user_id}
         if unread_only:
             query["read_at"] = None

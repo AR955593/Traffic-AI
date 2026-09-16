@@ -175,24 +175,35 @@ function completeAuthAndStartApp() {
     const titleEl = document.getElementById('home-welcome-title');
     const user = state.currentUser;
     if (titleEl && user) {
-        const firstName = user.name.split(' ')[0] || user.name;
+        const firstName = user.name ? (user.name.split(' ')[0] || user.name) : 'User';
         titleEl.textContent = `${greeting}, ${firstName}`;
     }
 
-    // Update Header Avatar
-    if (user) {
-        const headerName = document.getElementById('header-user-name');
-        const headerRole = document.getElementById('header-user-role');
-        const headerAvatar = document.getElementById('header-user-avatar');
-        if(headerName) headerName.textContent = user.name;
-        if(headerRole) headerRole.textContent = user.role_display || user.role;
-        if(headerAvatar) headerAvatar.textContent = user.initials || 'U';
+    // Update Header & Role Navigation
+    if (typeof updateHeaderUserDisplay === 'function') {
+        updateHeaderUserDisplay();
+    }
+
+    // Role-specific Dashboard Landing & RBAC View Switch
+    if (user && user.role === 'ADMIN') {
+        if (typeof fetchAdminData === 'function') fetchAdminData();
+        if (typeof switchView === 'function') switchView('administration');
+        showToast(`Logged in as System Admin (${user.name})`, 'success');
+    } else if (user && user.role === 'TRAFFIC_OPERATOR') {
+        if (typeof switchView === 'function') switchView('operator-dashboard');
+        showToast(`Logged in as Traffic Operator (${user.name})`, 'success');
+    } else {
+        if (typeof switchView === 'function') switchView('live-operations');
+        showToast(`Welcome back to TrafficAI, ${user?.name || 'Commuter'}`, 'success');
+    }
+
+    // Fetch live notifications for current role
+    if (window.NotificationController && typeof window.NotificationController.fetchNotifications === 'function') {
+        window.NotificationController.fetchNotifications();
     }
 
     // Initialize main map if not already done
     if (leafletMap) leafletMap.invalidateSize();
-    
-    showToast('Welcome back to TrafficAI', 'success');
 }
 
 function initOnboardingCarousel() {
