@@ -4352,4 +4352,74 @@ body.theme-dark .dev-title-badge {
     }
 }
 
+/* Admin Dashboard Responsive KPI Grid */
+.admin-kpi-grid {
+    display: grid;
+    grid-template-columns: repeat(6, 1fr);
+    gap: 16px;
+    margin-top: 16px;
+    width: 100%;
+}
+
+@media (max-width: 1200px) {
+    .admin-kpi-grid {
+        grid-template-columns: repeat(3, 1fr);
+    }
+}
+
+@media (max-width: 768px) {
+    .admin-kpi-grid {
+        grid-template-columns: repeat(2, 1fr);
+    }
+}
+
+@media (max-width: 480px) {
+    .admin-kpi-grid {
+        grid-template-columns: 1fr;
+    }
+}
+
+.admin-kpi-card {
+    background: var(--bg-card, #1e293b);
+    border: 1px solid var(--border-color, #334155);
+    border-radius: 12px;
+    padding: 16px;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.admin-kpi-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 18px rgba(0, 0, 0, 0.1);
+}
+
+.admin-kpi-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--text-dim, #64748b);
+}
+
+.admin-kpi-header i {
+    font-size: 16px;
+}
+
+.admin-kpi-value {
+    font-size: 28px;
+    font-weight: 800;
+    line-height: 1.2;
+    margin: 8px 0 4px 0;
+    color: var(--text-main, #f8fafc);
+}
+
+.admin-kpi-sub {
+    font-size: 11px;
+    color: var(--text-muted, #94a3b8);
+}
+
 

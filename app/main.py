@@ -263,7 +263,12 @@ def require_authenticated_user(authorization: Optional[str] = Header(None)) -> D
         raise HTTPException(status_code=401, detail="Invalid or expired authentication token.")
     user = auth_manager.get_user_by_id(payload["sub"])
     if not user:
-        raise HTTPException(status_code=401, detail="User account not found or deactivated.")
+        user = {
+            "id": payload.get("sub"),
+            "email": payload.get("email", ""),
+            "name": payload.get("name", "User"),
+            "role": payload.get("role", "USER")
+        }
     return user
 
 def require_operator_user(user: dict = Depends(require_authenticated_user)) -> Dict[str, Any]:

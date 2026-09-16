@@ -20,16 +20,19 @@ client = TestClient(app)
 
 @pytest.fixture
 def setup_users():
+    import uuid
     db = get_mongo_db()
-    # Clean up test users
-    db.users.delete_many({"email_normalized": {"$in": ["iso_user_a@test.com", "iso_user_b@test.com", "iso_op@test.com"]}})
-    
+    uid = uuid.uuid4().hex[:8]
+    email_a = f"iso_user_a_{uid}@test.com"
+    email_b = f"iso_user_b_{uid}@test.com"
+    email_op = f"iso_op_{uid}@test.com"
+
     # Create User A
-    user_a = auth_manager.register_user("iso_user_a@test.com", "Password123!", "User A", role="USER")["user"]
+    user_a = auth_manager.register_user(email_a, "Password123!", "User A", role="USER")["user"]
     # Create User B
-    user_b = auth_manager.register_user("iso_user_b@test.com", "Password123!", "User B", role="USER")["user"]
+    user_b = auth_manager.register_user(email_b, "Password123!", "User B", role="USER")["user"]
     # Create Traffic Operator
-    op_user = auth_manager.register_user("iso_op@test.com", "Password123!", "Op User", role="TRAFFIC_OPERATOR")["user"]
+    op_user = auth_manager.register_user(email_op, "Password123!", "Op User", role="TRAFFIC_OPERATOR")["user"]
     auth_manager.approve_operator(op_user["id"], admin_user_id="usr_admin")
 
     token_a = generate_jwt_token(user_a["id"], user_a["email"], "USER", user_a["name"])
