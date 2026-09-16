@@ -116,7 +116,7 @@ def test_google_verification_expired_token():
     """Verify verify_google_token rejects expired tokens."""
     mock_tokeninfo = {
         "iss": "accounts.google.com",
-        "aud": "",
+        "aud": os.getenv("GOOGLE_CLIENT_ID", ""),
         "sub": "1234567890",
         "email": "user@example.com",
         "email_verified": True,
@@ -135,7 +135,7 @@ def test_google_verification_unverified_email():
     """Verify verify_google_token rejects Google accounts with unverified emails."""
     mock_tokeninfo = {
         "iss": "https://accounts.google.com",
-        "aud": "",
+        "aud": os.getenv("GOOGLE_CLIENT_ID", ""),
         "sub": "1234567890",
         "email": "unverified@example.com",
         "email_verified": False

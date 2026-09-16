@@ -270,7 +270,9 @@ class AuthManager:
         else:
             return ["view_live", "plan_routes"]
 
-    def register_user(self, email: str, password: str, name: str, city: str = "Kanpur, UP", role: str = "VIEWER") -> Dict[str, Any]:
+    def register_user(self, email: str, password: str, name: str, city: str = "Kanpur, UP", role: str = "USER") -> Dict[str, Any]:
+        # Public registration MUST always force role = USER
+        forced_role = "USER"
         email_clean = normalize_email(email)
         if not email_clean or not re.match(r"^[^@\s]+@[^@\s]+\.[^@\s]+$", email_clean):
             raise ValueError("Invalid email address format.")
@@ -288,7 +290,7 @@ class AuthManager:
         hashed_pwd = hash_password(password)
 
         initials = compute_initials(name)
-        role_display = "Public Commuter" if role == "VIEWER" else role.replace("_", " ").title()
+        role_display = "Public Commuter"
         now_dt = datetime.now(timezone.utc)
         now_str = now_dt.isoformat()
 
@@ -304,7 +306,7 @@ class AuthManager:
             "email_verified": False,
             "phone": None,
             "phone_verified": False,
-            "role": role,
+            "role": forced_role,
             "role_display": role_display,
             "city": city,
             "avatar_url": None,
@@ -757,6 +759,9 @@ class AuthManager:
         user = db.users.find_one({"id": user_id})
         if not user:
             return False
+
+        if user.get("role") == "ADMIN":
+            raise ValueError("Primary Admin account cannot be deleted.")
 
         # Purge all collections associated with this user
         db.users.delete_one({"id": user_id})

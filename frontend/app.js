@@ -3,9 +3,9 @@
 // Frontend Core Application Engine (Desktop, Mobile & APK)
 // =========================================================
 
-const API_BASE = (window.location.origin && !window.location.origin.startsWith('file:') && window.location.origin !== 'null')
+const API_BASE = (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1')
     ? window.location.origin
-    : 'https://trafficai-taupe.vercel.app';
+    : 'https://traffic-ai-2qcn.onrender.com';
 const WS_BASE = API_BASE.replace(/^http/, 'ws');
 
 // Helper: Dynamically generate user avatar initials from full name
@@ -541,6 +541,11 @@ function bindAuthForms() {
         const passConfirm = document.getElementById('reg-password-confirm').value;
         const btn = document.getElementById('btn-register-submit');
         
+        if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test((ident || '').trim())) {
+            showToast('Please enter a valid email address (e.g. name@domain.com).', 'warning');
+            return;
+        }
+
         if (pass !== passConfirm) {
             showToast('Passwords do not match', 'error');
             return;
@@ -553,9 +558,9 @@ function bindAuthForms() {
                 const res = await fetch(`${API_BASE}/api/v1/auth/register`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ email: ident, password: pass, name: name })
+                    body: JSON.stringify({ email: ident.trim(), password: pass, name: name.trim() })
                 });
-                const data = await res.json();
+                const data = await res.json().catch(() => ({}));
                 if (res.ok) {
                     localStorage.setItem('traffic_ai_token', data.token);
                     localStorage.setItem('trafficai_token', data.token);
@@ -577,11 +582,17 @@ function bindAuthForms() {
                     } else {
                         completeAuthAndStartApp();
                     }
+                } else if (res.status === 409) {
+                    showToast(data.detail || 'An account with this email address already exists.', 'warning');
+                } else if (res.status === 400 || res.status === 422) {
+                    showToast(data.detail || 'Please check your name, email, and password format.', 'warning');
+                } else if (res.status === 503) {
+                    showToast('Authentication service is temporarily unavailable. Please try again.', 'error');
                 } else {
-                    showToast(data.detail || 'Registration failed', 'error');
+                    showToast(data.detail || `Registration error (${res.status}). Please try again.`, 'error');
                 }
             } catch (err) {
-                showToast('Network error during registration', 'error');
+                showToast('Unable to reach TrafficAI server. Please check your connection.', 'error');
             } finally {
                 btn.innerHTML = 'Register';
                 btn.disabled = false;

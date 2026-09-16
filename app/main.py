@@ -1180,6 +1180,36 @@ async def traffic_websocket(websocket: WebSocket):
         if websocket in active_connections:
             active_connections.remove(websocket)
 
+@app.get("/api/v1/admin/env-check")
+def env_check(user: dict = Depends(verify_admin_access)):
+    """Verifies production environment variable configuration status without revealing secret values."""
+    required_vars = [
+        "MONGODB_URI",
+        "MONGODB_DATABASE",
+        "JWT_SECRET_KEY",
+        "TOMTOM_API_KEY",
+        "OPENWEATHER_API_KEY",
+        "GOOGLE_CLIENT_ID",
+        "ENV"
+    ]
+    env_status = {}
+    for var in required_vars:
+        val = os.getenv(var, "").strip()
+        if not val:
+            env_status[var] = "MISSING"
+        elif var == "MONGODB_URI" and ("127.0.0.1" in val or "localhost" in val):
+            env_status[var] = "WARNING: LOCALHOST"
+        elif var in ["TOMTOM_API_KEY", "OPENWEATHER_API_KEY"] and val.startswith("YOUR_"):
+            env_status[var] = "WARNING: PLACEHOLDER"
+        else:
+            env_status[var] = "SET"
+
+    return {
+        "status": "success",
+        "environment": os.getenv("ENV", "development"),
+        "variables": env_status
+    }
+
 # -------------------------------------------------------------
 # STATIC FRONTEND MOUNTING
 # -------------------------------------------------------------
@@ -1189,4 +1219,5 @@ if os.path.exists(frontend_dir) and not os.environ.get("VERCEL"):
 
 if __name__ == "__main__":
     import uvicorn
-    uvicorn.run(app, host="127.0.0.1", port=8000)
+    port = int(os.getenv("PORT", "8000"))
+    uvicorn.run(app, host="0.0.0.0", port=port)
