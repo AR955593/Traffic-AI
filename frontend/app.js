@@ -3117,112 +3117,179 @@ async function fetchProvidersData() {
     } catch (e) {}
 }
 
+let currentAdminOpTab = 'PENDING_APPROVAL';
+
 async function fetchAdminData() {
+    const token = localStorage.getItem('traffic_ai_token') || localStorage.getItem('trafficai_token');
+    const authHeader = token ? { 'Authorization': `Bearer ${token}` } : {};
+
+    // 1. Fetch Real Admin KPI Dashboard Metrics
     try {
-        const token = localStorage.getItem('traffic_ai_token') || localStorage.getItem('trafficai_token');
-        const resUsers = await fetch(`${API_BASE}/api/v1/admin/users`, {
-            headers: { 'Authorization': `Bearer ${token}` }
-        });
-        if (resUsers.ok) {
-            const users = await resUsers.json();
-            const userList = document.getElementById('admin-user-roles-list');
-            if (userList) {
-                userList.innerHTML = '';
+        const resDash = await fetch(`${API_BASE}/api/v1/admin/dashboard`, { headers: authHeader });
+        if (resDash.ok) {
+            const data = await resDash.json();
+            const m = data.metrics || {};
+            if (document.getElementById('adm-kpi-users')) document.getElementById('adm-kpi-users').textContent = m.total_users ?? 0;
+            if (document.getElementById('adm-kpi-active-ops')) document.getElementById('adm-kpi-active-ops').textContent = m.active_operators ?? 0;
+            if (document.getElementById('adm-kpi-pending-ops')) document.getElementById('adm-kpi-pending-ops').textContent = m.pending_operators ?? 0;
+            if (document.getElementById('adm-kpi-incidents')) document.getElementById('adm-kpi-incidents').textContent = m.active_incidents ?? 0;
+            if (document.getElementById('adm-kpi-health')) document.getElementById('adm-kpi-health').textContent = m.system_health || 'ONLINE';
+            if (document.getElementById('adm-kpi-alerts')) document.getElementById('adm-kpi-alerts').textContent = m.unread_alerts ?? 0;
 
-                // Show pending operators section if any exist
-                const pendingOps = users.filter(u => u.role === 'TRAFFIC_OPERATOR' && u.status === 'PENDING_APPROVAL');
-                if (pendingOps.length > 0) {
-                    const header = document.createElement('div');
-                    header.style.cssText = 'padding:6px 10px;background:rgba(245,158,11,0.15);border-radius:4px;color:#f59e0b;font-size:11px;font-weight:700;margin-bottom:8px;';
-                    header.innerHTML = `<i class="fa-solid fa-clock"></i> PENDING OPERATOR APPROVALS (${pendingOps.length})`;
-                    userList.appendChild(header);
+            if (document.getElementById('tab-cnt-pending')) document.getElementById('tab-cnt-pending').textContent = m.pending_operators ?? 0;
+            if (document.getElementById('tab-cnt-active')) document.getElementById('tab-cnt-active').textContent = m.active_operators ?? 0;
+            if (document.getElementById('tab-cnt-suspended')) document.getElementById('tab-cnt-suspended').textContent = m.suspended_operators ?? 0;
+        }
+    } catch (e) {}
 
-                    pendingOps.forEach(u => {
-                        const item = document.createElement('div');
-                        item.className = 'factor-item';
-                        item.style.cssText = 'background:rgba(245,158,11,0.1);border:1px solid #f59e0b;padding:8px 12px;margin-bottom:8px;border-radius:6px;display:flex;justify-content:space-between;align-items:center;';
-                        item.innerHTML = `
-                            <div>
-                                <b>${u.name}</b> <span style="background:#f59e0b;color:#000;font-size:10px;padding:2px 6px;border-radius:4px;font-weight:600;">Pending</span><br>
-                                <small class="text-dim">${u.email} | Phone: ${u.country_code || '+91'} ${u.phone || 'N/A'}</small>
-                            </div>
-                            <div style="display:flex;gap:4px;">
-                                <button class="btn btn-sm btn-primary btn-approve-op" style="padding:4px 10px;font-size:11px;background:#10b981;border:none;"><i class="fa-solid fa-check"></i> Approve</button>
-                                <button class="btn btn-sm btn-danger btn-reject-op" style="padding:4px 10px;font-size:11px;background:#ef4444;border:none;"><i class="fa-solid fa-xmark"></i> Reject</button>
-                            </div>
+    // 2. Fetch Operator Table Data
+    try {
+        const resOps = await fetch(`${API_BASE}/api/v1/admin/operators?status=${currentAdminOpTab}`, { headers: authHeader });
+        if (resOps.ok) {
+            const data = await resOps.json();
+            const ops = data.operators || [];
+            const tbody = document.getElementById('adm-operators-tbody');
+            if (tbody) {
+                tbody.innerHTML = '';
+                if (ops.length === 0) {
+                    tbody.innerHTML = `<tr><td colspan="7" style="padding:16px;text-align:center;color:var(--text-dim);">No operator accounts found for this status.</td></tr>`;
+                } else {
+                    ops.forEach(op => {
+                        const tr = document.createElement('tr');
+                        tr.style.borderBottom = '1px solid var(--border-color, #334155)';
+                        const statusTag = op.status === 'APPROVED' ? '<span class="route-tag-pill tag-fast">✓ Active</span>' :
+                                         (op.status === 'PENDING_APPROVAL' ? '<span class="route-tag-pill tag-rec">Pending</span>' :
+                                         (op.status === 'SUSPENDED' ? '<span class="route-tag-pill" style="background:rgba(239,68,68,0.2);color:#ef4444;">Suspended</span>' :
+                                         '<span class="route-tag-pill" style="background:rgba(100,116,139,0.2);color:#94a3b8;">Rejected</span>'));
+                        
+                        let actionsHtml = '';
+                        if (op.status === 'PENDING_APPROVAL') {
+                            actionsHtml = `
+                                <button class="btn btn-xs btn-primary btn-appr-op" style="background:#10b981;border:none;margin-right:4px;"><i class="fa-solid fa-check"></i> Approve</button>
+                                <button class="btn btn-xs btn-danger btn-rej-op" style="background:#ef4444;border:none;"><i class="fa-solid fa-xmark"></i> Reject</button>
+                            `;
+                        } else if (op.status === 'APPROVED') {
+                            actionsHtml = `<button class="btn btn-xs btn-danger btn-susp-op" style="background:#ef4444;border:none;"><i class="fa-solid fa-ban"></i> Suspend</button>`;
+                        } else if (op.status === 'SUSPENDED') {
+                            actionsHtml = `<button class="btn btn-xs btn-primary btn-react-op" style="background:#3b82f6;border:none;"><i class="fa-solid fa-rotate-left"></i> Reactivate</button>`;
+                        } else {
+                            actionsHtml = `<span class="text-dim" style="font-size:11px;">Rejected</span>`;
+                        }
+
+                        tr.innerHTML = `
+                            <td style="padding:10px;"><b>${op.name}</b></td>
+                            <td style="padding:10px;">${op.email}</td>
+                            <td style="padding:10px;">${op.country_code || '+91'} ${op.phone || 'N/A'}</td>
+                            <td style="padding:10px;">${op.city || 'Kanpur, UP'}</td>
+                            <td style="padding:10px;">${op.created_at ? new Date(op.created_at).toLocaleDateString() : 'Recent'}</td>
+                            <td style="padding:10px;">${statusTag}</td>
+                            <td style="padding:10px;text-align:right;">${actionsHtml}</td>
                         `;
-                        item.querySelector('.btn-approve-op').addEventListener('click', async () => {
-                            const tok = localStorage.getItem('traffic_ai_token') || localStorage.getItem('trafficai_token');
-                            const resp = await fetch(`${API_BASE}/api/v1/admin/approve-operator`, {
-                                method: 'POST',
-                                headers: {
-                                    'Content-Type': 'application/json',
-                                    'Authorization': `Bearer ${tok}`
-                                },
-                                body: JSON.stringify({ operator_user_id: u.id })
-                            });
-                            if (resp.ok) {
-                                showToast(`Operator ${u.name} approved & activated!`, 'success');
-                                fetchAdminData();
-                            } else {
-                                const d = await resp.json();
-                                showToast(d.detail || 'Approval failed', 'error');
-                            }
-                        });
-                        item.querySelector('.btn-reject-op').addEventListener('click', async () => {
-                            const tok = localStorage.getItem('traffic_ai_token') || localStorage.getItem('trafficai_token');
-                            const resp = await fetch(`${API_BASE}/api/v1/admin/reject-operator`, {
-                                method: 'POST',
-                                headers: {
-                                    'Content-Type': 'application/json',
-                                    'Authorization': `Bearer ${tok}`
-                                },
-                                body: JSON.stringify({ operator_user_id: u.id })
-                            });
-                            if (resp.ok) {
-                                showToast(`Operator ${u.name} application rejected.`, 'info');
-                                fetchAdminData();
-                            } else {
-                                const d = await resp.json();
-                                showToast(d.detail || 'Rejection failed', 'error');
-                            }
-                        });
-                        userList.appendChild(item);
+
+                        // Bind action listeners
+                        tr.querySelector('.btn-appr-op')?.addEventListener('click', () => handleAdminOpAction('approve-operator', op.id, op.name));
+                        tr.querySelector('.btn-rej-op')?.addEventListener('click', () => handleAdminOpAction('reject-operator', op.id, op.name));
+                        tr.querySelector('.btn-susp-op')?.addEventListener('click', () => handleAdminOpAction('suspend-operator', op.id, op.name));
+                        tr.querySelector('.btn-react-op')?.addEventListener('click', () => handleAdminOpAction('reactivate-operator', op.id, op.name));
+
+                        tbody.appendChild(tr);
                     });
                 }
+            }
+        }
+    } catch (e) {}
 
-                users.forEach(u => {
+    // 3. Fetch System Infrastructure Health
+    try {
+        const resH = await fetch(`${API_BASE}/api/v1/admin/system-health`, { headers: authHeader });
+        if (resH.ok) {
+            const data = await resH.json();
+            const container = document.getElementById('adm-health-services-list');
+            if (container && data.services) {
+                container.innerHTML = '';
+                data.services.forEach(srv => {
                     const item = document.createElement('div');
-                    item.className = 'factor-item';
-                    item.style.cursor = 'pointer';
-                    const statusBadge = u.status === 'PENDING_APPROVAL' ? ' <span style="color:#f59e0b;">(Pending)</span>' : (u.is_active ? ' <span style="color:#10b981;">✓ Active</span>' : '');
+                    item.style.cssText = 'display:flex;justify-content:space-between;align-items:center;background:rgba(255,255,255,0.03);padding:8px 12px;border-radius:6px;font-size:12px;';
+                    const isOnline = srv.status === 'ONLINE' || srv.status === 'CONNECTED';
                     item.innerHTML = `
-                        <div>
-                            <b>${u.name}</b> (${u.role_display})${statusBadge}<br>
-                            <small class="text-dim">${u.email}</small>
-                        </div>
-                        <button class="btn btn-sm btn-outline">Switch</button>
+                        <span><b>${srv.name}</b></span>
+                        <span class="route-tag-pill ${isOnline ? 'tag-fast' : 'tag-rec'}">${srv.status}</span>
                     `;
-                    item.querySelector('button').addEventListener('click', async () => {
-                        const tok = localStorage.getItem('traffic_ai_token') || localStorage.getItem('trafficai_token');
-                        await fetch(`${API_BASE}/api/v1/admin/switch-user`, {
-                            method: 'POST',
-                            headers: {
-                                'Content-Type': 'application/json',
-                                'Authorization': `Bearer ${tok}`
-                            },
-                            body: JSON.stringify({ user_id: u.id })
-                        });
-                        state.currentUser = u;
-                        updateHeaderUserDisplay();
-                        fetchAdminData();
-                    });
-                    userList.appendChild(item);
+                    container.appendChild(item);
                 });
             }
         }
     } catch (e) {}
+
+    // 4. Fetch Audit Logs
+    try {
+        const resA = await fetch(`${API_BASE}/api/v1/admin/audit-logs?limit=15`, { headers: authHeader });
+        if (resA.ok) {
+            const logs = await resA.json();
+            const tbody = document.getElementById('adm-audit-tbody');
+            if (tbody) {
+                tbody.innerHTML = '';
+                if (!logs || logs.length === 0) {
+                    tbody.innerHTML = `<tr><td colspan="4" style="padding:12px;text-align:center;color:var(--text-dim);">No recent audit activity recorded.</td></tr>`;
+                } else {
+                    logs.forEach(log => {
+                        const tr = document.createElement('tr');
+                        tr.style.borderBottom = '1px solid var(--border-color, #334155)';
+                        const tStr = log.timestamp ? new Date(log.timestamp).toLocaleTimeString() : 'Just now';
+                        tr.innerHTML = `
+                            <td style="padding:8px;color:var(--text-dim);">${tStr}</td>
+                            <td style="padding:8px;"><b>${log.actor || 'System'}</b></td>
+                            <td style="padding:8px;"><span class="text-teal">${log.action}</span></td>
+                            <td style="padding:8px;">${log.details || log.target || 'N/A'}</td>
+                        `;
+                        tbody.appendChild(tr);
+                    });
+                }
+            }
+        }
+    } catch (e) {}
 }
+
+async function handleAdminOpAction(actionPath, opId, opName) {
+    if (!confirm(`Are you sure you want to proceed with action '${actionPath}' for operator ${opName}?`)) return;
+    try {
+        const token = localStorage.getItem('traffic_ai_token') || localStorage.getItem('trafficai_token');
+        const res = await fetch(`${API_BASE}/api/v1/admin/${actionPath}`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${token}`
+            },
+            body: JSON.stringify({ operator_user_id: opId })
+        });
+        if (res.ok) {
+            showToast(`Operator ${opName} action completed!`, 'success');
+            fetchAdminData();
+        } else {
+            const d = await res.json();
+            showToast(d.detail || 'Action failed', 'error');
+        }
+    } catch (err) {
+        showToast('Network error', 'error');
+    }
+}
+
+// Bind Admin Tab listeners
+document.addEventListener('DOMContentLoaded', () => {
+    document.querySelectorAll('#adm-op-tabs button').forEach(btn => {
+        btn.addEventListener('click', () => {
+            document.querySelectorAll('#adm-op-tabs button').forEach(b => b.classList.remove('active'));
+            btn.classList.add('active');
+            currentAdminOpTab = btn.dataset.tab;
+            fetchAdminData();
+        });
+    });
+
+    document.getElementById('btn-refresh-admin-data')?.addEventListener('click', () => {
+        showToast('Refreshing Admin Console metrics...', 'info');
+        fetchAdminData();
+    });
+});
 
 function initThemeAndUser() {
     const themeBtn = document.getElementById('btn-theme-toggle');

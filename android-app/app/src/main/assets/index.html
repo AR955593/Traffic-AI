@@ -1275,29 +1275,179 @@
                 <!-- ========================================= -->
                 <div class="view-panel" id="view-administration">
                     <div class="analytics-layout">
-                        <div class="panel-header-row">
-                            <div>
-                                <h2><i class="fa-solid fa-building-shield text-teal"></i> Administration & Security
-                                    (RBAC)</h2>
-                                <span class="subtitle">User role switching, congestion threshold configuration, and
-                                    audit logs</span>
+                        <!-- ADMIN HEADER & LIVE STATUS BAR -->
+                        <div class="panel-header-row" style="flex-direction:column;align-items:flex-start;gap:12px;">
+                            <div style="display:flex;justify-content:space-between;align-items:center;width:100%;flex-wrap:wrap;gap:10px;">
+                                <div>
+                                    <h2 style="margin:0;"><i class="fa-solid fa-building-shield text-teal"></i> Administration & Security Console</h2>
+                                    <span class="subtitle">System oversight, operator approvals, RBAC permissions, audit logs and health monitoring</span>
+                                </div>
+                                <div style="display:flex;gap:8px;">
+                                    <button class="btn btn-outline btn-sm" id="btn-refresh-admin-data"><i class="fa-solid fa-rotate"></i> Refresh Metrics</button>
+                                </div>
+                            </div>
+
+                            <!-- LIVE SYSTEM STATUS BAR -->
+                            <div class="admin-status-strip" style="display:flex;gap:16px;flex-wrap:wrap;background:var(--bg-card, #1e293b);padding:10px 16px;border-radius:8px;border:1px solid var(--border-color, #334155);width:100%;font-size:12px;font-weight:600;">
+                                <span id="adm-sys-status">SYSTEM <b class="text-mint">● ONLINE</b></span>
+                                <span id="adm-db-status">DATABASE <b class="text-mint">● CONNECTED</b></span>
+                                <span id="adm-traffic-status">TRAFFIC API <b class="text-mint">● CONNECTED</b></span>
+                                <span id="adm-weather-status">WEATHER API <b class="text-mint">● CONNECTED</b></span>
+                                <span id="adm-ws-status">WEBSOCKET <b class="text-mint">● CONNECTED</b></span>
                             </div>
                         </div>
 
-                        <div class="admin-sections-grid">
-                            <div class="admin-card">
-                                <h3>Switch Active User Role</h3>
-                                <p class="subtitle">Test platform capabilities under different role permissions</p>
-                                <div class="user-role-list" id="admin-user-roles-list">
+                        <!-- ADMIN KPI METRICS GRID -->
+                        <div class="kpi-grid" style="margin-top:16px;grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));gap:12px;">
+                            <div class="kpi-card">
+                                <div class="kpi-title"><i class="fa-solid fa-users text-teal"></i> Total Users</div>
+                                <div class="kpi-value" id="adm-kpi-users">--</div>
+                                <div class="kpi-sub">Registered platform accounts</div>
+                            </div>
+                            <div class="kpi-card">
+                                <div class="kpi-title"><i class="fa-solid fa-user-shield text-mint"></i> Active Operators</div>
+                                <div class="kpi-value text-mint" id="adm-kpi-active-ops">--</div>
+                                <div class="kpi-sub">Verified active control room users</div>
+                            </div>
+                            <div class="kpi-card">
+                                <div class="kpi-title"><i class="fa-solid fa-clock text-peach"></i> Pending Approvals</div>
+                                <div class="kpi-value text-peach" id="adm-kpi-pending-ops">--</div>
+                                <div class="kpi-sub">Operator applications awaiting review</div>
+                            </div>
+                            <div class="kpi-card">
+                                <div class="kpi-title"><i class="fa-solid fa-triangle-exclamation text-red"></i> Active Incidents</div>
+                                <div class="kpi-value text-red" id="adm-kpi-incidents">--</div>
+                                <div class="kpi-sub">Active traffic incidents reported</div>
+                            </div>
+                            <div class="kpi-card">
+                                <div class="kpi-title"><i class="fa-solid fa-heart-pulse text-teal"></i> System Health</div>
+                                <div class="kpi-value text-teal" id="adm-kpi-health">ONLINE</div>
+                                <div class="kpi-sub">Backend & database status</div>
+                            </div>
+                            <div class="kpi-card">
+                                <div class="kpi-title"><i class="fa-solid fa-bell text-peach"></i> System Alerts</div>
+                                <div class="kpi-value text-peach" id="adm-kpi-alerts">--</div>
+                                <div class="kpi-sub">Unread administrative alerts</div>
+                            </div>
+                        </div>
+
+                        <!-- OPERATOR MANAGEMENT SECTION -->
+                        <div class="admin-card" style="margin-top:20px;padding:20px;background:var(--bg-card, #1e293b);border-radius:12px;border:1px solid var(--border-color, #334155);">
+                            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;flex-wrap:wrap;gap:10px;">
+                                <div>
+                                    <h3 style="margin:0;"><i class="fa-solid fa-user-gear text-teal"></i> Operator Management</h3>
+                                    <p class="subtitle" style="margin:2px 0 0 0;">Manage Traffic Operator applications, status, and system access</p>
+                                </div>
+                                <div class="tab-group" style="display:flex;gap:6px;" id="adm-op-tabs">
+                                    <button class="btn btn-sm btn-outline active" data-tab="PENDING_APPROVAL"><i class="fa-solid fa-clock"></i> Pending (<span id="tab-cnt-pending">0</span>)</button>
+                                    <button class="btn btn-sm btn-outline" data-tab="APPROVED"><i class="fa-solid fa-circle-check"></i> Active (<span id="tab-cnt-active">0</span>)</button>
+                                    <button class="btn btn-sm btn-outline" data-tab="SUSPENDED"><i class="fa-solid fa-ban"></i> Suspended (<span id="tab-cnt-suspended">0</span>)</button>
+                                    <button class="btn btn-sm btn-outline" data-tab="ALL"><i class="fa-solid fa-list"></i> All</button>
+                                </div>
+                            </div>
+
+                            <!-- OPERATORS TABLE -->
+                            <div style="overflow-x:auto;">
+                                <table class="data-table" style="width:100%;border-collapse:collapse;font-size:13px;" id="adm-operators-table">
+                                    <thead>
+                                        <tr style="border-bottom:1px solid var(--border-color, #334155);text-align:left;color:var(--text-muted);">
+                                            <th style="padding:10px;">Operator Name</th>
+                                            <th style="padding:10px;">Email Address</th>
+                                            <th style="padding:10px;">Phone & Code</th>
+                                            <th style="padding:10px;">City / Zone</th>
+                                            <th style="padding:10px;">Applied Date</th>
+                                            <th style="padding:10px;">Status</th>
+                                            <th style="padding:10px;text-align:right;">Actions</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="adm-operators-tbody">
+                                        <!-- Injected dynamically -->
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+
+                        <!-- GRID FOR SYSTEM HEALTH & INCIDENT OVERSIGHT -->
+                        <div class="admin-sections-grid" style="margin-top:20px;display:grid;grid-template-columns: 1fr 1fr;gap:20px;">
+                            <!-- SYSTEM HEALTH DETAILS -->
+                            <div class="admin-card" style="padding:20px;background:var(--bg-card, #1e293b);border-radius:12px;border:1px solid var(--border-color, #334155);">
+                                <h3 style="margin:0 0 4px 0;"><i class="fa-solid fa-server text-teal"></i> Infrastructure & API Health</h3>
+                                <p class="subtitle" style="margin-bottom:12px;">Real-time connectivity and status of platform integration services</p>
+                                <div id="adm-health-services-list" style="display:flex;flex-direction:column;gap:8px;">
                                     <!-- Injected dynamically -->
                                 </div>
                             </div>
 
-                            <div class="admin-card">
-                                <h3>System Audit Log</h3>
-                                <div class="audit-log-box" id="admin-audit-log-box">
+                            <!-- INCIDENT OVERSIGHT -->
+                            <div class="admin-card" style="padding:20px;background:var(--bg-card, #1e293b);border-radius:12px;border:1px solid var(--border-color, #334155);">
+                                <h3 style="margin:0 0 4px 0;"><i class="fa-solid fa-triangle-exclamation text-peach"></i> Incident Oversight</h3>
+                                <p class="subtitle" style="margin-bottom:12px;">High-level summary of city incidents reported by commuters</p>
+                                <div id="adm-incidents-oversight-list" style="display:flex;flex-direction:column;gap:8px;">
                                     <!-- Injected dynamically -->
                                 </div>
+                            </div>
+                        </div>
+
+                        <!-- GRID FOR RBAC PERMISSIONS & SYSTEM NOTIFICATIONS -->
+                        <div class="admin-sections-grid" style="margin-top:20px;display:grid;grid-template-columns: 1fr 1fr;gap:20px;">
+                            <!-- RBAC PERMISSIONS -->
+                            <div class="admin-card" style="padding:20px;background:var(--bg-card, #1e293b);border-radius:12px;border:1px solid var(--border-color, #334155);">
+                                <h3 style="margin:0 0 4px 0;"><i class="fa-solid fa-shield-halved text-mint"></i> Role-Based Access Control (RBAC)</h3>
+                                <p class="subtitle" style="margin-bottom:12px;">Platform access policies and permission matrices</p>
+                                <div style="display:flex;flex-direction:column;gap:10px;">
+                                    <div style="background:rgba(16,185,129,0.1);border:1px solid rgba(16,185,129,0.3);padding:10px 14px;border-radius:8px;">
+                                        <strong class="text-mint"><i class="fa-solid fa-user-shield"></i> SYSTEM ADMIN</strong>
+                                        <div style="font-size:11px;color:var(--text-muted);margin-top:4px;">Full platform control, operator approvals, RBAC policies, audit logs, system configuration. Single primary admin enforced.</div>
+                                    </div>
+                                    <div style="background:rgba(245,158,11,0.1);border:1px solid rgba(245,158,11,0.3);padding:10px 14px;border-radius:8px;">
+                                        <strong class="text-peach"><i class="fa-solid fa-traffic-light"></i> TRAFFIC OPERATOR</strong>
+                                        <div style="font-size:11px;color:var(--text-muted);margin-top:4px;">Signal timing overrides, incident verification & triage, emergency corridor dispatch, traffic alert composer. Requires Admin approval before login.</div>
+                                    </div>
+                                    <div style="background:rgba(59,130,246,0.1);border:1px solid rgba(59,130,246,0.3);padding:10px 14px;border-radius:8px;">
+                                        <strong class="text-blue"><i class="fa-solid fa-user"></i> USER / COMMUTER</strong>
+                                        <div style="font-size:11px;color:var(--text-muted);margin-top:4px;">Public traffic view, AI route optimization, personal saved places/routes, trip history, and public incident reporting. Restricted from operator & admin tools.</div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- SYSTEM NOTIFICATIONS FEED -->
+                            <div class="admin-card" style="padding:20px;background:var(--bg-card, #1e293b);border-radius:12px;border:1px solid var(--border-color, #334155);">
+                                <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
+                                    <div>
+                                        <h3 style="margin:0;"><i class="fa-solid fa-bell text-peach"></i> System Notifications</h3>
+                                        <p class="subtitle" style="margin:2px 0 0 0;">Recent administrative alerts and system events</p>
+                                    </div>
+                                    <button class="btn btn-xs btn-outline" id="btn-admin-mark-all-read"><i class="fa-solid fa-check-double"></i> Mark All Read</button>
+                                </div>
+                                <div id="adm-notifications-feed" style="max-height:240px;overflow-y:auto;display:flex;flex-direction:column;gap:8px;">
+                                    <!-- Injected dynamically -->
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- COMPACT AUDIT LOG SECTION -->
+                        <div class="admin-card" style="margin-top:20px;padding:20px;background:var(--bg-card, #1e293b);border-radius:12px;border:1px solid var(--border-color, #334155);">
+                            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
+                                <div>
+                                    <h3 style="margin:0;"><i class="fa-solid fa-list-check text-teal"></i> System Audit Log</h3>
+                                    <p class="subtitle" style="margin:2px 0 0 0;">Security and administrative action activity trail from MongoDB `audit_logs`</p>
+                                </div>
+                                <span class="text-dim" style="font-size:11px;">Showing last 50 events</span>
+                            </div>
+                            <div style="overflow-x:auto;">
+                                <table class="data-table" style="width:100%;border-collapse:collapse;font-size:12px;" id="adm-audit-table">
+                                    <thead>
+                                        <tr style="border-bottom:1px solid var(--border-color, #334155);text-align:left;color:var(--text-muted);">
+                                            <th style="padding:8px;">Time</th>
+                                            <th style="padding:8px;">Actor</th>
+                                            <th style="padding:8px;">Action</th>
+                                            <th style="padding:8px;">Resource / Details</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="adm-audit-tbody">
+                                        <!-- Injected dynamically -->
+                                    </tbody>
+                                </table>
                             </div>
                         </div>
                     </div>
