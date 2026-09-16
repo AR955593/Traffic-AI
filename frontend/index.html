@@ -2133,16 +2133,50 @@
                 <!-- Tab 2: Register -->
                 <div class="auth-tab-content" id="auth-tab-register">
                     <div class="form-group">
+                        <label>Account Type</label>
+                        <div style="display:flex;gap:10px;margin-top:4px;">
+                            <label style="flex:1;cursor:pointer;background:var(--bg-card, #1e293b);padding:8px 12px;border:1px solid var(--border-color, #334155);border-radius:6px;display:flex;align-items:center;gap:6px;font-size:13px;">
+                                <input type="radio" name="auth-reg-role" value="USER" checked> <i class="fa-solid fa-user text-mint"></i> User / Commuter
+                            </label>
+                            <label style="flex:1;cursor:pointer;background:var(--bg-card, #1e293b);padding:8px 12px;border:1px solid var(--border-color, #334155);border-radius:6px;display:flex;align-items:center;gap:6px;font-size:13px;">
+                                <input type="radio" name="auth-reg-role" value="TRAFFIC_OPERATOR"> <i class="fa-solid fa-user-shield text-peach"></i> Traffic Operator
+                            </label>
+                        </div>
+                        <small class="text-dim" style="font-size:11px;display:block;margin-top:4px;color:var(--text-muted);">* Traffic Operator accounts require Primary Admin verification before login.</small>
+                    </div>
+
+                    <div class="form-group">
                         <label>Full Name</label>
                         <input type="text" id="auth-reg-name" class="custom-input" placeholder="Ankit Rajput">
                     </div>
                     <div class="form-group">
                         <label>Email Address</label>
                         <input type="email" id="auth-reg-email" class="custom-input" placeholder="user@example.com">
+                        <small class="text-dim" style="font-size:10px;color:var(--text-muted);">* Temp/disposable email addresses are strictly blocked.</small>
                     </div>
                     <div class="form-group">
-                        <label>Password (min. 6 chars)</label>
+                        <label>Phone Number (with Country Code)</label>
+                        <div style="display:flex;gap:6px;">
+                            <select id="auth-reg-country-code" class="custom-input" style="width:110px;">
+                                <option value="+91" selected>🇮🇳 +91</option>
+                                <option value="+1">🇺🇸 +1</option>
+                                <option value="+44">🇬🇧 +44</option>
+                                <option value="+971">🇦🇪 +971</option>
+                                <option value="+61">🇦🇺 +61</option>
+                                <option value="+49">🇩🇪 +49</option>
+                                <option value="+33">🇫🇷 +33</option>
+                                <option value="+81">🇯🇵 +81</option>
+                                <option value="+92">🇵🇰 +92</option>
+                                <option value="+880">🇧🇩 +880</option>
+                                <option value="+977">🇳🇵 +977</option>
+                            </select>
+                            <input type="tel" id="auth-reg-phone" class="custom-input" placeholder="9876543210" style="flex:1;">
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label>Password (8–16 chars: A-Z, a-z, 0-9 & Special Char)</label>
                         <input type="password" id="auth-reg-password" class="custom-input" placeholder="••••••••">
+                        <small class="text-dim" style="font-size:10px;color:var(--text-muted);">Must be 8-16 chars, contain 1 uppercase, 1 lowercase, 1 number, and 1 special char (!@#$).</small>
                     </div>
                     <div class="form-group">
                         <label>City / Region</label>

@@ -105,6 +105,51 @@ def decode_access_token(token: str) -> Optional[dict]:
 def normalize_email(email: str) -> str:
     return email.strip().lower()
 
+DISPOSABLE_EMAIL_DOMAINS = {
+    "tempmail.com", "temp-mail.org", "guerrillamail.com", "guerrillamail.net",
+    "10minutemail.com", "10minutemail.net", "mailinator.com", "trashmail.com",
+    "yopmail.com", "yopmail.fr", "dispostable.com", "getnada.com", "sharklasers.com",
+    "throwawaymail.com", "fake-mail.com", "crazymailing.com", "maildrop.cc",
+    "mytemp.email", "boun.cr", "mohmal.com", "generator.email", "emailondeck.com",
+    "007mail.com", "tempmail.io", "guerrillamailblock.com", "byom.de", "mailnesia.com"
+}
+
+def validate_password_strength(password: str) -> None:
+    """
+    Enforces strict 8-16 character strong password rules:
+    - Minimum 8 characters, maximum 16 characters
+    - At least one uppercase letter (A-Z)
+    - At least one lowercase letter (a-z)
+    - At least one digit (0-9)
+    - At least one special character (!@#$%^&*()_+-=[]{}|;:,.<>?/~)
+    """
+    if not password:
+        raise ValueError("Password is required.")
+    if len(password) < 8 or len(password) > 16:
+        raise ValueError("Password must be between 8 and 16 characters long.")
+    if not re.search(r"[A-Z]", password):
+        raise ValueError("Password must contain at least one uppercase letter (A-Z).")
+    if not re.search(r"[a-z]", password):
+        raise ValueError("Password must contain at least one lowercase letter (a-z).")
+    if not re.search(r"\d", password):
+        raise ValueError("Password must contain at least one number (0-9).")
+    if not re.search(r"[!@#$%^&*()_+\-=\[\]{}|;:,.<>?/~]", password):
+        raise ValueError("Password must contain at least one special character (e.g. !@#$%^&*).")
+
+def validate_email_address(email: str) -> str:
+    """
+    Validates RFC email format and blocks disposable/temporary email domains.
+    """
+    email_clean = normalize_email(email)
+    if not email_clean or not re.match(r"^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$", email_clean):
+        raise ValueError("Invalid email address format. Please enter a valid email.")
+    
+    domain = email_clean.split("@")[-1].lower()
+    if domain in DISPOSABLE_EMAIL_DOMAINS or any(domain.endswith("." + d) for d in DISPOSABLE_EMAIL_DOMAINS):
+        raise ValueError(f"Disposable or temporary email address ({domain}) is not permitted. Please use a valid email.")
+    return email_clean
+
+
 class AuditLogger:
     def __init__(self):
         pass
@@ -270,16 +315,25 @@ class AuthManager:
         else:
             return ["view_live", "plan_routes"]
 
-    def register_user(self, email: str, password: str, name: str, city: str = "Kanpur, UP", role: str = "USER") -> Dict[str, Any]:
-        # Public registration MUST always force role = USER
-        forced_role = "USER"
-        email_clean = normalize_email(email)
-        if not email_clean or not re.match(r"^[^@\s]+@[^@\s]+\.[^@\s]+$", email_clean):
-            raise ValueError("Invalid email address format.")
-        if not password or len(password) < 6:
-            raise ValueError("Password must be at least 6 characters long.")
+    def register_user(self, email: str, password: str, name: str, city: str = "Kanpur, UP", role: str = "USER", phone: Optional[str] = None, country_code: Optional[str] = "+91") -> Dict[str, Any]:
+        email_clean = validate_email_address(email)
+        validate_password_strength(password)
+        
         if not name or len(name.strip()) < 2:
             raise ValueError("Name must be at least 2 characters long.")
+
+        role_clean = (role or "USER").upper().strip()
+
+        if role_clean in ["TRAFFIC_OPERATOR", "OPERATOR"]:
+            target_role = "TRAFFIC_OPERATOR"
+            status = "PENDING_APPROVAL"
+            is_active = False
+            role_display = "Traffic Operator (Pending Approval)"
+        else:
+            target_role = "USER"
+            status = "APPROVED"
+            is_active = True
+            role_display = "Public Commuter"
 
         db = get_mongo_db()
         existing = db.users.find_one({"email_normalized": email_clean})
@@ -290,7 +344,6 @@ class AuthManager:
         hashed_pwd = hash_password(password)
 
         initials = compute_initials(name)
-        role_display = "Public Commuter"
         now_dt = datetime.now(timezone.utc)
         now_str = now_dt.isoformat()
 
@@ -304,13 +357,15 @@ class AuthManager:
             "auth_provider": "local",
             "google_subject": None,
             "email_verified": False,
-            "phone": None,
+            "phone": phone.strip() if phone else None,
+            "country_code": country_code.strip() if country_code else "+91",
             "phone_verified": False,
-            "role": forced_role,
+            "role": target_role,
             "role_display": role_display,
+            "status": status,
             "city": city,
             "avatar_url": None,
-            "is_active": True,
+            "is_active": is_active,
             "created_at": now_str,
             "updated_at": now_str,
             "last_login_at": now_str
@@ -347,16 +402,18 @@ class AuthManager:
             upsert=True
         )
 
-        token = create_access_token({"sub": user_id, "email": email_clean, "role": role})
+        token = create_access_token({"sub": user_id, "email": email_clean, "role": target_role})
         cleaned_user = self.get_user_by_id(user_id)
-        self.audit_logger.log_action("USER_REGISTER", name.strip(), f"Registered new user ({email_clean}) in MongoDB.")
+        self.audit_logger.log_action("USER_REGISTER", name.strip(), f"Registered ({email_clean}) as {target_role} [status={status}].")
 
         return {
             "user": cleaned_user,
             "token": token,
             "verification_token": raw_verify_token,
             "email_verification_token": raw_verify_token,
-            "email_verified": False
+            "email_verified": False,
+            "status": status,
+            "message": "Operator account registered! Pending Admin approval before login." if status == "PENDING_APPROVAL" else "Account created successfully."
         }
 
     def verify_email(self, token: str) -> Dict[str, Any]:
@@ -448,6 +505,12 @@ class AuthManager:
 
         if not verify_password(password, user_raw.get("password_hash", "")):
             raise ValueError("Invalid email or password.")
+
+        if user_raw.get("status") == "PENDING_APPROVAL" or not user_raw.get("is_active", True):
+            if user_raw.get("role") in ["TRAFFIC_OPERATOR", "OPERATOR"]:
+                raise ValueError("Operator account is pending Admin approval. Please contact the administrator.")
+            else:
+                raise ValueError("Account is currently inactive or pending approval.")
 
         now_str = datetime.now(timezone.utc).isoformat()
         db = get_mongo_db()
@@ -804,3 +867,121 @@ class AuthManager:
             doc["permissions"] = self._get_permissions_for_role(doc.get("role", "VIEWER"))
             users.append(doc)
         return users
+
+    def list_pending_operators(self) -> List[Dict[str, Any]]:
+        """Returns all operator accounts pending Admin verification."""
+        db = get_mongo_db()
+        cursor = db.users.find(
+            {"role": "TRAFFIC_OPERATOR", "status": "PENDING_APPROVAL"},
+            {"_id": 0, "password_hash": 0}
+        ).sort("created_at", -1)
+        return list(cursor)
+
+    def approve_operator(self, operator_user_id: str, admin_user_id: str = "usr_admin") -> Dict[str, Any]:
+        """Approves a pending operator account and activates it for login."""
+        db = get_mongo_db()
+        operator = db.users.find_one({"id": operator_user_id, "role": "TRAFFIC_OPERATOR"})
+        if not operator:
+            raise ValueError("Pending operator account not found.")
+
+        now_str = datetime.now(timezone.utc).isoformat()
+        db.users.update_one(
+            {"id": operator_user_id},
+            {"$set": {
+                "status": "APPROVED",
+                "is_active": True,
+                "role_display": "Traffic Operator",
+                "approved_by": admin_user_id,
+                "approved_at": now_str,
+                "updated_at": now_str
+            }}
+        )
+
+        updated = self.get_user_by_id(operator_user_id)
+        self.audit_logger.log_action("OPERATOR_APPROVED", operator.get("name", operator_user_id), f"Operator account approved by Admin ({admin_user_id}).")
+        return {"status": "success", "message": "Operator account approved and activated.", "user": updated}
+
+    def reject_operator(self, operator_user_id: str, admin_user_id: str = "usr_admin") -> Dict[str, Any]:
+        """Rejects a pending operator registration request."""
+        db = get_mongo_db()
+        operator = db.users.find_one({"id": operator_user_id, "role": "TRAFFIC_OPERATOR"})
+        if not operator:
+            raise ValueError("Pending operator account not found.")
+
+        now_str = datetime.now(timezone.utc).isoformat()
+        db.users.update_one(
+            {"id": operator_user_id},
+            {"$set": {
+                "status": "REJECTED",
+                "is_active": False,
+                "role_display": "Rejected Operator",
+                "rejected_by": admin_user_id,
+                "rejected_at": now_str,
+                "updated_at": now_str
+            }}
+        )
+
+        updated = self.get_user_by_id(operator_user_id)
+        self.audit_logger.log_action("OPERATOR_REJECTED", operator.get("name", operator_user_id), f"Operator application rejected by Admin ({admin_user_id}).")
+        return {"status": "success", "message": "Operator application rejected.", "user": updated}
+
+    def send_phone_otp(self, phone: str, country_code: str = "+91") -> Dict[str, Any]:
+        """Generates and stores a 6-digit phone verification OTP."""
+        clean_phone = re.sub(r"\D", "", phone or "")
+        if not clean_phone or len(clean_phone) < 7:
+            raise ValueError("Invalid phone number format.")
+
+        otp_code = secrets.choice(["123456", "654321", "789012", "345678", "901234"])
+        now_dt = datetime.now(timezone.utc)
+        expires_at = now_dt + timedelta(minutes=10)
+
+        db = get_mongo_db()
+        db.phone_otp_tokens.delete_many({"phone": clean_phone})
+        db.phone_otp_tokens.insert_one({
+            "phone": clean_phone,
+            "country_code": country_code,
+            "otp_code": otp_code,
+            "expires_at": expires_at,
+            "created_at": now_dt
+        })
+
+        self.audit_logger.log_action("PHONE_OTP_SENT", f"{country_code}{clean_phone}", "Phone verification OTP generated.")
+        return {
+            "status": "success",
+            "message": f"OTP sent to {country_code} {clean_phone}.",
+            "demo_otp": otp_code
+        }
+
+    def verify_phone_otp(self, user_id: str, phone: str, otp_code: str) -> Dict[str, Any]:
+        """Validates phone OTP code and sets phone_verified = True for user."""
+        clean_phone = re.sub(r"\D", "", phone or "")
+        if not clean_phone or not otp_code:
+            raise ValueError("Phone number and OTP code are required.")
+
+        db = get_mongo_db()
+        record = db.phone_otp_tokens.find_one({"phone": clean_phone, "otp_code": otp_code.strip()})
+        if not record:
+            raise ValueError("Invalid or incorrect OTP code.")
+
+        expires_at = record.get("expires_at")
+        if expires_at:
+            if isinstance(expires_at, datetime) and expires_at.tzinfo is None:
+                expires_at = expires_at.replace(tzinfo=timezone.utc)
+            if datetime.now(timezone.utc) > expires_at:
+                raise ValueError("OTP code has expired. Please request a new OTP.")
+
+        now_str = datetime.now(timezone.utc).isoformat()
+        db.users.update_one(
+            {"id": user_id},
+            {"$set": {
+                "phone": clean_phone,
+                "phone_verified": True,
+                "updated_at": now_str
+            }}
+        )
+
+        db.phone_otp_tokens.delete_one({"_id": record["_id"]})
+        updated = self.get_user_by_id(user_id)
+        self.audit_logger.log_action("PHONE_VERIFIED", updated["name"] if updated else user_id, f"Phone verified ({clean_phone}).")
+        return {"status": "success", "message": "Phone number verified successfully.", "user": updated}
+

@@ -34,7 +34,7 @@ def test_mongodb_connection_and_health():
 def test_user_registration_duplicate_and_password_hashing():
     auth = AuthManager()
     email = "mongo_tester_reg@traffic.ai"
-    password = "StrongPassword987!"
+    password = "StrongPass987!"
     name = "Mongo Tester"
 
     # Clean up any leftover test data
@@ -61,7 +61,7 @@ def test_user_registration_duplicate_and_password_hashing():
 
     # 2. Duplicate registration attempt should raise KeyError (maps to 409 Conflict)
     with pytest.raises(KeyError) as exc_info:
-        auth.register_user(email.upper(), "AnotherPass123", "Duplicate Name")
+        auth.register_user(email.upper(), "AnotherPass123!", "Duplicate Name")
     assert "already exists" in str(exc_info.value).lower()
 
     # Cleanup
@@ -70,7 +70,7 @@ def test_user_registration_duplicate_and_password_hashing():
 def test_email_verification_flow():
     auth = AuthManager()
     email = "mongo_verify_test@traffic.ai"
-    password = "VerifyPassword123"
+    password = "VerifyPass123!"
     name = "Verification Tester"
 
     db = get_mongo_db()
@@ -108,7 +108,7 @@ def test_email_verification_flow():
 def test_login_and_jwt_authentication():
     auth = AuthManager()
     email = "mongo_login_test@traffic.ai"
-    password = "CorrectPassword123"
+    password = "CorrectPass123!"
     name = "Login Tester"
 
     db = get_mongo_db()
@@ -217,8 +217,8 @@ def test_cross_user_isolation():
     db = get_mongo_db()
     db.users.delete_many({"email_normalized": {"$in": ["alpha@traffic.ai", "beta@traffic.ai"]}})
 
-    alpha = auth.register_user("alpha@traffic.ai", "AlphaPass123", "User Alpha")["user"]
-    beta = auth.register_user("beta@traffic.ai", "BetaPass123", "User Beta")["user"]
+    alpha = auth.register_user("alpha@traffic.ai", "AlphaPass123!", "User Alpha")["user"]
+    beta = auth.register_user("beta@traffic.ai", "BetaPass123!", "User Beta")["user"]
 
     alpha_id = alpha["id"]
     beta_id = beta["id"]
@@ -281,7 +281,7 @@ def test_cross_user_isolation():
 def test_fastapi_endpoints_integration():
     """Test FastAPI HTTP endpoints for auth, duplicates, health, and profile."""
     test_email = "api_mongo_test@traffic.ai"
-    test_pass = "TestApiPass123"
+    test_pass = "TestApiPass123!"
 
     db = get_mongo_db()
     db.users.delete_many({"email_normalized": test_email.lower()})
@@ -308,7 +308,7 @@ def test_fastapi_endpoints_integration():
     # 3. Duplicate registration -> 409 Conflict
     dup_resp = client.post("/api/v1/auth/register", json={
         "email": test_email,
-        "password": "OtherPassword",
+        "password": "OtherPass123!",
         "name": "API Tester Duplicate"
     })
     assert dup_resp.status_code == 409

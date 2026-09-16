@@ -134,6 +134,20 @@ class RegisterRequest(BaseModel):
     password: str
     name: str
     city: Optional[str] = "Kanpur, UP"
+    role: Optional[str] = "USER"
+    phone: Optional[str] = None
+    country_code: Optional[str] = "+91"
+
+class OperatorApprovalRequest(BaseModel):
+    operator_user_id: str
+
+class SendPhoneOTPRequest(BaseModel):
+    phone: str
+    country_code: Optional[str] = "+91"
+
+class VerifyPhoneOTPRequest(BaseModel):
+    phone: str
+    otp_code: str
 
 class LoginRequest(BaseModel):
     email: str
@@ -337,10 +351,18 @@ def get_privacy_policy():
 @app.post("/api/v1/auth/register")
 def register_user(req: RegisterRequest):
     try:
-        res = auth_manager.register_user(req.email, req.password, req.name, req.city or "Kanpur, UP")
+        res = auth_manager.register_user(
+            email=req.email,
+            password=req.password,
+            name=req.name,
+            city=req.city or "Kanpur, UP",
+            role=req.role or "USER",
+            phone=req.phone,
+            country_code=req.country_code or "+91"
+        )
         return {
             "status": "success",
-            "message": "Account created successfully.",
+            "message": res.get("message", "Account created successfully."),
             "user": res["user"],
             "token": res["token"],
             "email_verification_token": res.get("email_verification_token")
@@ -360,11 +382,27 @@ def login_user(req: LoginRequest):
         res = auth_manager.login_user(req.email, req.password)
         return {"status": "success", "message": "Login successful.", "user": res["user"], "token": res["token"]}
     except ValueError as e:
-        raise HTTPException(status_code=401, detail=str(e))
+        detail_msg = str(e)
+        status_code = 403 if "pending Admin approval" in detail_msg or "inactive" in detail_msg else 401
+        raise HTTPException(status_code=status_code, detail=detail_msg)
     except (ServerSelectionTimeoutError, PyMongoError):
         raise HTTPException(status_code=503, detail="Authentication service temporarily unavailable.")
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+
+@app.post("/api/v1/auth/send-phone-otp")
+def send_phone_otp(req: SendPhoneOTPRequest):
+    try:
+        return auth_manager.send_phone_otp(req.phone, req.country_code or "+91")
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+@app.post("/api/v1/auth/verify-phone-otp")
+def verify_phone_otp(req: VerifyPhoneOTPRequest, user: dict = Depends(get_current_user_from_header)):
+    try:
+        return auth_manager.verify_phone_otp(user["id"], req.phone, req.otp_code)
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
 
 @app.get("/api/v1/auth/config")
 def get_auth_config():
@@ -1140,6 +1178,24 @@ def verify_admin_access(user: dict = Depends(require_authenticated_user)):
 @app.get("/api/v1/admin/users")
 def get_all_users(user: dict = Depends(verify_admin_access)):
     return auth_manager.list_users()
+
+@app.get("/api/v1/admin/pending-operators")
+def get_pending_operators(user: dict = Depends(verify_admin_access)):
+    return auth_manager.list_pending_operators()
+
+@app.post("/api/v1/admin/approve-operator")
+def approve_operator(req: OperatorApprovalRequest, user: dict = Depends(verify_admin_access)):
+    try:
+        return auth_manager.approve_operator(req.operator_user_id, admin_user_id=user["id"])
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+@app.post("/api/v1/admin/reject-operator")
+def reject_operator(req: OperatorApprovalRequest, user: dict = Depends(verify_admin_access)):
+    try:
+        return auth_manager.reject_operator(req.operator_user_id, admin_user_id=user["id"])
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
 
 @app.post("/api/v1/admin/switch-user")
 def switch_user(req: SwitchUserRequest, user: dict = Depends(verify_admin_access)):

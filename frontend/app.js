@@ -3067,31 +3067,102 @@ async function fetchProvidersData() {
 
 async function fetchAdminData() {
     try {
-        const resUsers = await fetch(`${API_BASE}/api/v1/admin/users`);
+        const token = localStorage.getItem('traffic_ai_token') || localStorage.getItem('trafficai_token');
+        const resUsers = await fetch(`${API_BASE}/api/v1/admin/users`, {
+            headers: { 'Authorization': `Bearer ${token}` }
+        });
         if (resUsers.ok) {
             const users = await resUsers.json();
             const userList = document.getElementById('admin-user-roles-list');
             if (userList) {
                 userList.innerHTML = '';
+
+                // Show pending operators section if any exist
+                const pendingOps = users.filter(u => u.role === 'TRAFFIC_OPERATOR' && u.status === 'PENDING_APPROVAL');
+                if (pendingOps.length > 0) {
+                    const header = document.createElement('div');
+                    header.style.cssText = 'padding:6px 10px;background:rgba(245,158,11,0.15);border-radius:4px;color:#f59e0b;font-size:11px;font-weight:700;margin-bottom:8px;';
+                    header.innerHTML = `<i class="fa-solid fa-clock"></i> PENDING OPERATOR APPROVALS (${pendingOps.length})`;
+                    userList.appendChild(header);
+
+                    pendingOps.forEach(u => {
+                        const item = document.createElement('div');
+                        item.className = 'factor-item';
+                        item.style.cssText = 'background:rgba(245,158,11,0.1);border:1px solid #f59e0b;padding:8px 12px;margin-bottom:8px;border-radius:6px;display:flex;justify-content:space-between;align-items:center;';
+                        item.innerHTML = `
+                            <div>
+                                <b>${u.name}</b> <span style="background:#f59e0b;color:#000;font-size:10px;padding:2px 6px;border-radius:4px;font-weight:600;">Pending</span><br>
+                                <small class="text-dim">${u.email} | Phone: ${u.country_code || '+91'} ${u.phone || 'N/A'}</small>
+                            </div>
+                            <div style="display:flex;gap:4px;">
+                                <button class="btn btn-sm btn-primary btn-approve-op" style="padding:4px 10px;font-size:11px;background:#10b981;border:none;"><i class="fa-solid fa-check"></i> Approve</button>
+                                <button class="btn btn-sm btn-danger btn-reject-op" style="padding:4px 10px;font-size:11px;background:#ef4444;border:none;"><i class="fa-solid fa-xmark"></i> Reject</button>
+                            </div>
+                        `;
+                        item.querySelector('.btn-approve-op').addEventListener('click', async () => {
+                            const tok = localStorage.getItem('traffic_ai_token') || localStorage.getItem('trafficai_token');
+                            const resp = await fetch(`${API_BASE}/api/v1/admin/approve-operator`, {
+                                method: 'POST',
+                                headers: {
+                                    'Content-Type': 'application/json',
+                                    'Authorization': `Bearer ${tok}`
+                                },
+                                body: JSON.stringify({ operator_user_id: u.id })
+                            });
+                            if (resp.ok) {
+                                showToast(`Operator ${u.name} approved & activated!`, 'success');
+                                fetchAdminData();
+                            } else {
+                                const d = await resp.json();
+                                showToast(d.detail || 'Approval failed', 'error');
+                            }
+                        });
+                        item.querySelector('.btn-reject-op').addEventListener('click', async () => {
+                            const tok = localStorage.getItem('traffic_ai_token') || localStorage.getItem('trafficai_token');
+                            const resp = await fetch(`${API_BASE}/api/v1/admin/reject-operator`, {
+                                method: 'POST',
+                                headers: {
+                                    'Content-Type': 'application/json',
+                                    'Authorization': `Bearer ${tok}`
+                                },
+                                body: JSON.stringify({ operator_user_id: u.id })
+                            });
+                            if (resp.ok) {
+                                showToast(`Operator ${u.name} application rejected.`, 'info');
+                                fetchAdminData();
+                            } else {
+                                const d = await resp.json();
+                                showToast(d.detail || 'Rejection failed', 'error');
+                            }
+                        });
+                        userList.appendChild(item);
+                    });
+                }
+
                 users.forEach(u => {
                     const item = document.createElement('div');
                     item.className = 'factor-item';
                     item.style.cursor = 'pointer';
+                    const statusBadge = u.status === 'PENDING_APPROVAL' ? ' <span style="color:#f59e0b;">(Pending)</span>' : (u.is_active ? ' <span style="color:#10b981;">✓ Active</span>' : '');
                     item.innerHTML = `
                         <div>
-                            <b>${u.name}</b> (${u.role_display})<br>
+                            <b>${u.name}</b> (${u.role_display})${statusBadge}<br>
                             <small class="text-dim">${u.email}</small>
                         </div>
                         <button class="btn btn-sm btn-outline">Switch</button>
                     `;
                     item.querySelector('button').addEventListener('click', async () => {
+                        const tok = localStorage.getItem('traffic_ai_token') || localStorage.getItem('trafficai_token');
                         await fetch(`${API_BASE}/api/v1/admin/switch-user`, {
                             method: 'POST',
-                            headers: { 'Content-Type': 'application/json' },
+                            headers: {
+                                'Content-Type': 'application/json',
+                                'Authorization': `Bearer ${tok}`
+                            },
                             body: JSON.stringify({ user_id: u.id })
                         });
                         state.currentUser = u;
-                        updateHeaderUser();
+                        updateHeaderUserDisplay();
                         fetchAdminData();
                     });
                     userList.appendChild(item);
@@ -3570,9 +3641,23 @@ function initAuthAndProfile() {
         const email = document.getElementById('auth-reg-email')?.value;
         const password = document.getElementById('auth-reg-password')?.value;
         const city = document.getElementById('auth-reg-city')?.value || 'Kanpur, UP';
+        const role = document.querySelector('input[name="auth-reg-role"]:checked')?.value || 'USER';
+        const phone = document.getElementById('auth-reg-phone')?.value || '';
+        const countryCode = document.getElementById('auth-reg-country-code')?.value || '+91';
 
         if (!name || !email || !password) {
             showToast('Please fill in all required fields', 'warning');
+            return;
+        }
+
+        if (password.length < 8 || password.length > 16) {
+            showToast('Password must be between 8 and 16 characters long.', 'warning');
+            return;
+        }
+
+        const strongPwdRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[!@#$%^&*()_+\-=\[\]{}|;:,.<>?/~]).{8,16}$/;
+        if (!strongPwdRegex.test(password)) {
+            showToast('Password must contain at least 1 uppercase, 1 lowercase, 1 number, and 1 special character (!@#$).', 'warning');
             return;
         }
 
@@ -3580,16 +3665,30 @@ function initAuthAndProfile() {
             const res = await fetch(`${API_BASE}/api/v1/auth/register`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ name, email, password, city })
+                body: JSON.stringify({
+                    name: name.trim(),
+                    email: email.trim(),
+                    password: password,
+                    city: city.trim(),
+                    role: role,
+                    phone: phone.trim(),
+                    country_code: countryCode
+                })
             });
 
-            const data = await res.json();
-            if (res.ok && data.token) {
-                localStorage.setItem('traffic_ai_token', data.token);
-                state.currentUser = data.user;
-                updateHeaderUserDisplay();
-                modalAuth?.classList.remove('active');
-                showToast(`Account created successfully! Welcome, ${data.user.name}!`, 'success');
+            const data = await res.json().catch(() => ({}));
+            if (res.ok) {
+                if (data.status === 'PENDING_APPROVAL' || data.user?.status === 'PENDING_APPROVAL') {
+                    showToast(data.message || 'Operator account registered! Pending Admin approval before login.', 'info');
+                    const loginTabBtn = document.querySelector('.auth-tab-btn[data-tab="auth-tab-login"]');
+                    if (loginTabBtn) loginTabBtn.click();
+                } else if (data.token) {
+                    localStorage.setItem('traffic_ai_token', data.token);
+                    state.currentUser = data.user;
+                    updateHeaderUserDisplay();
+                    modalAuth?.classList.remove('active');
+                    showToast(`Account created successfully! Welcome, ${data.user.name}!`, 'success');
+                }
             } else {
                 showToast(data.detail || 'Registration failed', 'error');
             }

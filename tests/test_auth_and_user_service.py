@@ -32,7 +32,7 @@ def test_auth_registration_and_login():
     auth = AuthManager()
     
     # Test registration
-    res = auth.register_user("testuser@traffic.ai", "SecretPass123", "Test User", "Kanpur, UP")
+    res = auth.register_user("testuser@traffic.ai", "SecretPass123!", "Test User", "Kanpur, UP")
     assert "user" in res
     assert "token" in res
     user = res["user"]
@@ -40,7 +40,7 @@ def test_auth_registration_and_login():
     assert user["name"] == "Test User"
 
     # Test login
-    login_res = auth.login_user("testuser@traffic.ai", "SecretPass123")
+    login_res = auth.login_user("testuser@traffic.ai", "SecretPass123!")
     assert login_res["user"]["id"] == user["id"]
     assert "token" in login_res
 
@@ -51,10 +51,10 @@ def test_auth_registration_and_login():
     # Test password reset flow
     reset_token = auth.request_password_reset("testuser@traffic.ai")
     assert len(reset_token) > 0
-    assert auth.confirm_password_reset(reset_token, "NewSecretPass456") is True
+    assert auth.confirm_password_reset(reset_token, "NewSecretPass456!") is True
     
     # Verify new password login
-    new_login = auth.login_user("testuser@traffic.ai", "NewSecretPass456")
+    new_login = auth.login_user("testuser@traffic.ai", "NewSecretPass456!")
     assert new_login["user"]["id"] == user["id"]
 
     # Cleanup
