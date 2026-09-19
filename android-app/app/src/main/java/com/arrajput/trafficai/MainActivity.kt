@@ -80,9 +80,9 @@ class MainActivity : ComponentActivity() {
         settings.loadWithOverviewMode = false
         settings.cacheMode = WebSettings.LOAD_NO_CACHE
 
-        // Keep standard WebView UA for normal web content
+        // Keep standard WebView UA for normal web content, append TrafficAI-Android-App tag
         val defaultUa = settings.userAgentString
-        settings.userAgentString = defaultUa.replace("; wv", "")
+        settings.userAgentString = defaultUa.replace("; wv", "") + " TrafficAI-Android-App"
 
         // Register Javascript Bridge Interface
         webView.addJavascriptInterface(WebAppInterface(this), "AndroidBridge")
@@ -93,6 +93,28 @@ class MainActivity : ComponentActivity() {
                     return false
                 }
                 return false
+            }
+
+            override fun onPageFinished(view: WebView?, url: String?) {
+                super.onPageFinished(view, url)
+                view?.evaluateJavascript(
+                    """
+                    (function() {
+                        document.documentElement.classList.add('is-android-app');
+                        document.body.classList.add('is-android-app');
+                        window.IS_TRAFFICAI_ANDROID_APP = true;
+                        var m = document.getElementById('modal-app-install');
+                        if (m) {
+                            m.style.display = 'none';
+                            m.classList.remove('active');
+                            m.setAttribute('aria-hidden', 'true');
+                        }
+                        var b = document.getElementById('app-install-banner') || document.getElementById('pwa-install-banner');
+                        if (b) { b.style.display = 'none'; }
+                    })();
+                    """.trimIndent(),
+                    null
+                )
             }
         }
 

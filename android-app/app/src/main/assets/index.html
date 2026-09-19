@@ -25,8 +25,21 @@
     <!-- Google Identity Services (GSI) Client -->
     <script src="https://accounts.google.com/gsi/client" async defer></script>
 
+    <!-- Early Environment Safeguard: Detect Android App -->
+    <script>
+        (function() {
+            var isApp = (typeof window.AndroidBridge !== 'undefined') ||
+                        (window.location.protocol === 'file:') ||
+                        (navigator.userAgent && (navigator.userAgent.indexOf('TrafficAI-Android-App') !== -1 || navigator.userAgent.indexOf('TrafficAIApp') !== -1 || navigator.userAgent.indexOf('wv') !== -1));
+            if (isApp) {
+                document.documentElement.classList.add('is-android-app');
+                window.IS_TRAFFICAI_ANDROID_APP = true;
+            }
+        })();
+    </script>
+
     <!-- Custom Application Styles -->
-    <link rel="stylesheet" href="styles.css?v=6.0.4">
+    <link rel="stylesheet" href="styles.css?v=6.0.5">
 </head>
 
 <body class="theme-dark">
@@ -480,11 +493,14 @@
                     </div>
                 </div>
 
-                <div class="header-center">
+                <div class="header-center" id="header-center-search">
                     <!-- GLOBAL SEARCH BOX -->
                     <div class="header-search-container">
+                        <button class="mobile-search-close-btn" id="btn-close-mobile-search" aria-label="Close search">
+                            <i class="fa-solid fa-arrow-left"></i>
+                        </button>
                         <i class="fa-solid fa-magnifying-glass header-search-icon"></i>
-                        <input type="text" class="header-search-input" id="global-search-input" placeholder="Search users, operators, roads, cameras, incidents, signals..." autocomplete="off">
+                        <input type="text" class="header-search-input" id="global-search-input" placeholder="Search users, operators, roads, cameras, incidents..." autocomplete="off">
                         <div class="search-dropdown-menu" id="global-search-dropdown">
                             <!-- Injected dynamically by app.js -->
                         </div>
@@ -523,9 +539,14 @@
                         <i class="fa-solid fa-server text-mint"></i>
                     </button>
 
-                    <div class="weather-widget" id="header-weather-widget">
+                    <!-- MOBILE SEARCH BUTTON (Visible only on mobile screens) -->
+                    <button class="icon-btn mobile-only-header-btn" id="btn-mobile-search-toggle" title="Search">
+                        <i class="fa-solid fa-magnifying-glass"></i>
+                    </button>
+
+                    <div class="weather-widget" id="header-weather-widget" title="Live Weather">
                         <i class="fa-solid fa-sun text-amber"></i>
-                        <span id="weather-text">30.6°C · Clear</span>
+                        <span id="weather-text">30°C · Clear</span>
                     </div>
 
                     <button class="icon-btn" id="btn-refresh" title="Refresh Live State">
@@ -4850,7 +4871,7 @@
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
     <!-- Core App Script -->
-    <script src="app.js?v=6.0.4"></script>
+    <script src="app.js?v=6.0.5"></script>
 </body>
 
 </html>

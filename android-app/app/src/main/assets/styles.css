@@ -2299,10 +2299,9 @@ table, .admin-table, .custom-table, .data-table {
     }
 
     .header-right .user-info-text,
+    .header-right .profile-caret,
     .last-update-text,
-    .connection-status,
-    .weather-widget,
-    #header-weather-widget {
+    .connection-status {
         display: none !important;
     }
 
@@ -2466,36 +2465,105 @@ table, .admin-table, .custom-table, .data-table {
 
     .top-header {
         height: auto;
-        min-height: 52px;
-        padding-top: max(8px, env(safe-area-inset-top, 0px));
+        min-height: 48px;
+        padding-top: max(6px, env(safe-area-inset-top, 0px));
         padding-bottom: 6px;
-        padding-left: max(8px, env(safe-area-inset-left, 0px));
-        padding-right: max(8px, env(safe-area-inset-right, 0px));
-        gap: 6px;
+        padding-left: max(6px, env(safe-area-inset-left, 0px));
+        padding-right: max(6px, env(safe-area-inset-right, 0px));
+        gap: 4px;
         display: flex;
         align-items: center;
         justify-content: space-between;
         flex-wrap: nowrap;
         width: 100%;
         box-sizing: border-box;
+        position: relative;
     }
 
     .header-left {
         display: flex;
         align-items: center;
-        gap: 6px;
-        flex-shrink: 1;
+        gap: 4px;
+        flex-shrink: 0;
         min-width: 0;
     }
 
-    .header-center {
+    .header-left .btn-mobile-menu {
+        width: 30px;
+        height: 30px;
+        min-width: 30px;
+        min-height: 30px;
+        font-size: 15px;
+        padding: 0;
         display: flex;
         align-items: center;
         justify-content: center;
-        flex: 1 1 auto;
-        min-width: 0;
-        max-width: 180px;
-        margin: 0 4px;
+        border-radius: 6px;
+        flex-shrink: 0;
+    }
+
+    .city-selector-badge {
+        max-width: 78px;
+        padding: 3px 6px;
+        font-size: 10.5px;
+        font-weight: 600;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        flex-shrink: 0;
+        border-radius: 6px;
+    }
+
+    .pill-badge.pill-live {
+        padding: 2px 5px;
+        font-size: 8.5px;
+        font-weight: 700;
+        flex-shrink: 0;
+        gap: 3px;
+        display: inline-flex;
+        align-items: center;
+    }
+
+    /* On mobile, collapse search into an overlay or icon to prevent header cutoff */
+    .header-center {
+        display: none !important;
+    }
+
+    .top-header.mobile-search-active .header-left,
+    .top-header.mobile-search-active .header-right {
+        display: none !important;
+    }
+
+    .top-header.mobile-search-active .header-center {
+        display: flex !important;
+        position: absolute;
+        inset: 0;
+        background: var(--bg-header);
+        padding: 6px 10px;
+        z-index: 600;
+        align-items: center;
+        gap: 6px;
+        width: 100%;
+        box-sizing: border-box;
+        max-width: 100%;
+        margin: 0;
+    }
+
+    .mobile-search-close-btn {
+        display: none;
+        background: transparent;
+        border: none;
+        color: var(--traffic-mint);
+        font-size: 16px;
+        padding: 4px 8px;
+        cursor: pointer;
+        flex-shrink: 0;
+    }
+
+    .top-header.mobile-search-active .mobile-search-close-btn {
+        display: flex;
+        align-items: center;
+        justify-content: center;
     }
 
     .header-search-container {
@@ -2506,61 +2574,102 @@ table, .admin-table, .custom-table, .data-table {
     }
 
     .header-search-input {
-        font-size: 11px;
+        font-size: 12px;
     }
 
     .header-right {
-        display: flex;
+        display: flex !important;
         align-items: center;
         gap: 4px;
         flex-shrink: 0;
+        margin-left: auto;
+    }
+
+    .header-right .mobile-only-header-btn {
+        display: flex !important;
     }
 
     .header-right .icon-btn {
-        width: 32px;
-        height: 32px;
-        min-width: 32px;
-        min-height: 32px;
-        font-size: 13px;
+        width: 28px;
+        height: 28px;
+        min-width: 28px;
+        min-height: 28px;
+        font-size: 12px;
         padding: 0;
         display: flex;
         align-items: center;
         justify-content: center;
+        border-radius: 6px;
+        flex-shrink: 0;
+    }
+
+    .weather-widget,
+    #header-weather-widget,
+    .header-right .weather-widget {
+        display: inline-flex !important;
+        align-items: center;
+        gap: 4px;
+        padding: 2px 6px;
+        font-size: 10.5px;
+        font-weight: 600;
+        border-radius: 12px;
+        background: rgba(255, 255, 255, 0.08);
+        border: 1px solid rgba(209, 232, 226, 0.22);
+        color: #ffffff;
+        white-space: nowrap;
+        cursor: pointer;
+        flex-shrink: 0;
+        height: 28px;
+        visibility: visible !important;
+        opacity: 1 !important;
+        pointer-events: auto !important;
+        box-sizing: border-box;
+    }
+
+    .weather-widget i,
+    #header-weather-widget i {
+        font-size: 12px;
+    }
+
+    .user-profile-wrapper {
+        display: inline-flex;
+        align-items: center;
+        flex-shrink: 0;
+        position: relative;
+    }
+
+    .user-profile-btn {
+        display: flex !important;
+        align-items: center;
+        justify-content: center;
+        padding: 0 !important;
+        margin: 0 !important;
+        border: none !important;
+        background: transparent !important;
+        cursor: pointer;
     }
 
     .header-right .user-avatar {
         width: 28px;
         height: 28px;
-        font-size: 10px;
-    }
-
-    .city-selector-badge {
-        max-width: 110px;
-        padding: 4px 6px;
-        font-size: 10px;
-        white-space: nowrap;
-        overflow: hidden;
-        text-overflow: ellipsis;
-    }
-
-    .pill-badge.pill-live {
-        padding: 3px 6px;
-        font-size: 9px;
+        min-width: 28px;
+        min-height: 28px;
+        font-size: 10.5px;
+        font-weight: 700;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background: linear-gradient(135deg, var(--traffic-teal), var(--traffic-mint));
+        color: #203531;
         flex-shrink: 0;
+        box-shadow: 0 2px 6px rgba(0, 0, 0, 0.25);
     }
 
-@media (max-width: 480px) {
-    .header-center {
+    .header-right .user-info-text,
+    .header-right .profile-caret {
         display: none !important;
     }
-    .top-header {
-        padding-left: 6px;
-        padding-right: 6px;
-    }
-    .city-selector-badge {
-        max-width: 95px;
-    }
-}
 
     /* Operations Layout & Compact Map */
     .operations-layout {
@@ -5093,18 +5202,39 @@ body.theme-dark .dev-title-badge {
 }
 
 @media (max-width: 1024px) {
-    /* Hide Weather Widget on Mobile & Tablet Headers to prevent header overflow */
+    /* Sleek Compact Weather Widget on Mobile & Tablet Headers */
     .weather-widget,
     #header-weather-widget,
     #weather-text,
     .header-right .weather-widget,
     div.weather-widget {
-        display: none !important;
-        width: 0 !important;
-        height: 0 !important;
-        opacity: 0 !important;
-        visibility: hidden !important;
-        pointer-events: none !important;
+        display: inline-flex !important;
+        align-items: center !important;
+        gap: 4px !important;
+        width: auto !important;
+        height: 28px !important;
+        opacity: 1 !important;
+        visibility: visible !important;
+        pointer-events: auto !important;
+        font-size: 11px !important;
+        font-weight: 600 !important;
+        padding: 2px 7px !important;
+        border-radius: 12px !important;
+        background: rgba(255, 255, 255, 0.08) !important;
+        border: 1px solid rgba(209, 232, 226, 0.22) !important;
+        color: #ffffff !important;
+        white-space: nowrap !important;
+        flex-shrink: 0 !important;
+        box-sizing: border-box !important;
+    }
+
+    body.theme-light .weather-widget,
+    body.theme-light #header-weather-widget,
+    body.theme-light #weather-text,
+    body.theme-light .header-right .weather-widget {
+        background: rgba(32, 53, 49, 0.08) !important;
+        border-color: rgba(32, 53, 49, 0.18) !important;
+        color: #0f172a !important;
     }
 
     /* Mobile KPI Bar: Horizontal Swipe Strip with Fixed Card Width */
@@ -6604,5 +6734,44 @@ body.theme-light .btn-primary i {
         padding: 12px 10px 60px 10px;
     }
 }
+
+/* =========================================================
+   ANDROID APP ENVIRONMENT SUPPRESSION
+   Ensures app-install popup/banners NEVER show inside mobile app
+   ========================================================= */
+html.is-android-app #modal-app-install,
+body.is-android-app #modal-app-install,
+html.is-android-app .app-install-card,
+body.is-android-app .app-install-card,
+html.is-android-app #app-install-banner,
+body.is-android-app #app-install-banner,
+html.is-android-app #pwa-install-banner,
+body.is-android-app #pwa-install-banner {
+    display: none !important;
+    visibility: hidden !important;
+    opacity: 0 !important;
+    pointer-events: none !important;
+}
+
+/* Light Theme Header Styling */
+body.theme-light .top-header {
+    background: #ffffff !important;
+    border-bottom: 1px solid rgba(0, 0, 0, 0.08) !important;
+    color: #0f172a !important;
+}
+
+body.theme-light .top-header .header-left .btn-mobile-menu,
+body.theme-light .top-header .header-right .icon-btn {
+    background: #f1f5f9 !important;
+    border: 1px solid rgba(0, 0, 0, 0.1) !important;
+    color: #1e293b !important;
+}
+
+body.theme-light .city-selector-badge {
+    background: #f8fafc !important;
+    border-color: rgba(0, 0, 0, 0.12) !important;
+    color: #0f172a !important;
+}
+
 
 

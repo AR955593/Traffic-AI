@@ -799,8 +799,40 @@ function initModals() {
 }
 window.initModals = initModals;
 
+function isAndroidAppEnvironment() {
+    return (
+        window.IS_TRAFFICAI_ANDROID_APP === true ||
+        typeof window.AndroidBridge !== 'undefined' ||
+        window.location.protocol === 'file:' ||
+        (navigator.userAgent && (
+            navigator.userAgent.includes('TrafficAI-Android-App') ||
+            navigator.userAgent.includes('TrafficAIApp') ||
+            navigator.userAgent.includes('wv')
+        ))
+    );
+}
+window.isAndroidAppEnvironment = isAndroidAppEnvironment;
+
 function initAppInstallPopup() {
+    const modal = document.getElementById('modal-app-install');
     const banner = document.getElementById('app-install-banner') || document.getElementById('pwa-install-banner');
+
+    // 1. If inside the Android App: PERMANENTLY SUPPRESS ANY INSTALL POPUP OR BANNER
+    if (isAndroidAppEnvironment()) {
+        document.documentElement.classList.add('is-android-app');
+        document.body.classList.add('is-android-app');
+        if (modal) {
+            modal.style.display = 'none';
+            modal.classList.remove('active');
+            modal.setAttribute('aria-hidden', 'true');
+        }
+        if (banner) {
+            banner.style.display = 'none';
+        }
+        return;
+    }
+
+    // 2. Web Banner Dismissal
     const btnDismiss = document.getElementById('btn-dismiss-install');
     if (btnDismiss && banner) {
         btnDismiss.addEventListener('click', () => {
@@ -808,6 +840,65 @@ function initAppInstallPopup() {
             sessionStorage.setItem('install_prompt_dismissed', 'true');
         });
     }
+
+    // 3. Web Popup ("Get the Traffic AI App") - ONLY FOR WEB USERS
+    if (!modal) return;
+    const isDismissed = localStorage.getItem('trafficai_install_dismissed') === 'true';
+    if (isDismissed) return;
+
+    const btnClose = document.getElementById('btn-close-app-install');
+    const btnMaybeLater = document.getElementById('btn-app-maybe-later');
+    const btnDownload = document.getElementById('btn-download-app');
+
+    function closeInstallModal(permanent = true) {
+        modal.classList.remove('active');
+        if (window.TrafficAISetScrollLock) window.TrafficAISetScrollLock(false);
+        if (permanent) {
+            localStorage.setItem('trafficai_install_dismissed', 'true');
+        }
+    }
+
+    // Delay 2.5s on Web before showing modal
+    setTimeout(() => {
+        if (isAndroidAppEnvironment()) return;
+        const activeModal = document.querySelector('.modal-backdrop.active');
+        const isSidebarOpen = document.getElementById('sidebar-desktop')?.classList.contains('open');
+        if (!activeModal && !isSidebarOpen && localStorage.getItem('trafficai_install_dismissed') !== 'true') {
+            modal.classList.add('active');
+            if (window.TrafficAISetScrollLock) window.TrafficAISetScrollLock(true);
+        }
+    }, 2500);
+
+    if (btnClose) {
+        btnClose.addEventListener('click', (e) => {
+            e.stopPropagation();
+            closeInstallModal(true);
+        });
+    }
+
+    if (btnMaybeLater) {
+        btnMaybeLater.addEventListener('click', (e) => {
+            e.stopPropagation();
+            closeInstallModal(true);
+        });
+    }
+
+    modal.addEventListener('click', (e) => {
+        if (e.target === modal) {
+            closeInstallModal(true);
+        }
+    });
+
+    if (btnDownload) {
+        btnDownload.addEventListener('click', () => {
+            localStorage.setItem('trafficai_install_dismissed', 'true');
+            setTimeout(() => {
+                closeInstallModal(true);
+            }, 600);
+        });
+    }
+
+    window.closeAppInstallModal = closeInstallModal;
 }
 window.initAppInstallPopup = initAppInstallPopup;
 
@@ -1781,6 +1872,15 @@ async function fetchHeaderWeather(lat = 26.4499, lon = 80.3319) {
     const kpiWeatherSub = document.getElementById('kpi-weather-sub');
     if (kpiWeatherVal) kpiWeatherVal.textContent = `${fallbackTemp}°C`;
     if (kpiWeatherSub) kpiWeatherSub.textContent = `${fallbackCond} · OpenWeather API`;
+
+    if (weatherWidget && !weatherWidget.dataset.boundClick) {
+        weatherWidget.dataset.boundClick = 'true';
+        weatherWidget.addEventListener('click', (e) => {
+            e.stopPropagation();
+            showToast(`Current Weather: ${weatherText.textContent}`, 'info');
+            fetchHeaderWeather();
+        });
+    }
 }
 window.fetchHeaderWeather = fetchHeaderWeather;
 
@@ -9140,6 +9240,29 @@ function initControlCenterEnhancements() {
             if (!searchInput.contains(e.target) && !searchDropdown.contains(e.target)) {
                 searchDropdown.classList.remove('active');
             }
+        });
+    }
+
+    // 1b. Mobile Search Toggle & Close handlers
+    const btnMobileSearchToggle = document.getElementById('btn-mobile-search-toggle');
+    const btnCloseMobileSearch = document.getElementById('btn-close-mobile-search');
+    const topHeader = document.querySelector('.top-header');
+
+    if (btnMobileSearchToggle && topHeader) {
+        btnMobileSearchToggle.addEventListener('click', (e) => {
+            e.stopPropagation();
+            topHeader.classList.add('mobile-search-active');
+            if (searchInput) {
+                setTimeout(() => searchInput.focus(), 50);
+            }
+        });
+    }
+
+    if (btnCloseMobileSearch && topHeader) {
+        btnCloseMobileSearch.addEventListener('click', (e) => {
+            e.stopPropagation();
+            topHeader.classList.remove('mobile-search-active');
+            if (searchDropdown) searchDropdown.classList.remove('active');
         });
     }
 
