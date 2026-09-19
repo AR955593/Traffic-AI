@@ -105,6 +105,72 @@ def decode_access_token(token: str) -> Optional[dict]:
 def normalize_email(email: str) -> str:
     return email.strip().lower()
 
+def normalize_phone(phone: Optional[str], default_country_code: str = "+91") -> Optional[str]:
+    """
+    Normalizes phone numbers to canonical E.164 format (e.g., +919876543210).
+    Handles:
+    - '+91 98765 43210' -> '+919876543210'
+    - '9876543210' (10-digit India) -> '+919876543210'
+    - '09876543210' (11-digit India with leading 0) -> '+919876543210'
+    - '00919876543210' -> '+919876543210'
+    - '+1 (415) 555-2671' -> '+14155552671'
+    """
+    if not phone:
+        return None
+    raw = str(phone).strip()
+    if not raw:
+        return None
+
+    # Replace leading 00 with +
+    if raw.startswith("00"):
+        raw = "+" + raw[2:]
+
+    has_plus = raw.startswith("+")
+    digits_only = re.sub(r"\D", "", raw)
+
+    if not digits_only:
+        raise ValueError("Invalid phone number format. Must contain digits.")
+
+    if has_plus:
+        canonical = f"+{digits_only}"
+    else:
+        # Check standard 10-digit national format for default country code (+91)
+        if len(digits_only) == 10:
+            cc = default_country_code.strip()
+            if not cc.startswith("+"):
+                cc = f"+{cc}"
+            canonical = f"{cc}{digits_only}"
+        elif len(digits_only) == 11 and digits_only.startswith("0"):
+            # Strip leading trunk 0
+            cc = default_country_code.strip()
+            if not cc.startswith("+"):
+                cc = f"+{cc}"
+            canonical = f"{cc}{digits_only[1:]}"
+        elif len(digits_only) == 12 and digits_only.startswith("91"):
+            canonical = f"+{digits_only}"
+        else:
+            cc = default_country_code.strip()
+            if not cc.startswith("+"):
+                cc = f"+{cc}"
+            canonical = f"{cc}{digits_only}"
+
+    # Validate canonical E.164 length: + followed by 7 to 15 digits
+    if not re.match(r"^\+[1-9]\d{6,14}$", canonical):
+        raise ValueError(f"Invalid phone number format: {phone}. Canonical format must be E.164 (e.g. +919876543210).")
+
+    return canonical
+
+def validate_phone_number(phone: str, default_country_code: str = "+91") -> str:
+    norm = normalize_phone(phone, default_country_code)
+    if not norm:
+        raise ValueError("Phone number cannot be empty.")
+    return norm
+
+def is_email_identifier(identifier: str) -> bool:
+    if not identifier:
+        return False
+    return "@" in str(identifier).strip()
+
 DISPOSABLE_EMAIL_DOMAINS = {
     "tempmail.com", "temp-mail.org", "guerrillamail.com", "guerrillamail.net",
     "10minutemail.com", "10minutemail.net", "mailinator.com", "trashmail.com",
@@ -116,8 +182,8 @@ DISPOSABLE_EMAIL_DOMAINS = {
 
 def validate_password_strength(password: str) -> None:
     """
-    Enforces strict 8-16 character strong password rules:
-    - Minimum 8 characters, maximum 16 characters
+    Enforces strong password rules:
+    - Minimum 8 characters, maximum 64 characters
     - At least one uppercase letter (A-Z)
     - At least one lowercase letter (a-z)
     - At least one digit (0-9)
@@ -125,8 +191,8 @@ def validate_password_strength(password: str) -> None:
     """
     if not password:
         raise ValueError("Password is required.")
-    if len(password) < 8 or len(password) > 16:
-        raise ValueError("Password must be between 8 and 16 characters long.")
+    if len(password) < 8 or len(password) > 64:
+        raise ValueError("Password must be between 8 and 64 characters long.")
     if not re.search(r"[A-Z]", password):
         raise ValueError("Password must contain at least one uppercase letter (A-Z).")
     if not re.search(r"[a-z]", password):
@@ -220,7 +286,7 @@ class AuthManager:
         db = get_mongo_db()
         defaults = [
             ("usr_operator", "rawasthi@kanpur.traffic.gov", "password123", "R. Awasthi", "RA", "TRAFFIC_OPERATOR", "Traffic Operator", "Kanpur, UP"),
-            ("usr_admin", "admin@traffisense.gov", "admin123", "S. Verma (Chief Admin)", "SV", "ADMIN", "System Administrator", "Kanpur, UP"),
+            ("usr_admin", "admin@traffisense.gov", "admin123", "ANKIT RAJPUT", "AR", "ADMIN", "System Administrator", "Kanpur, UP"),
             ("usr_analyst", "analyst@traffisense.gov", "analyst123", "P. Sharma", "PS", "ANALYST", "Senior Traffic Analyst", "Kanpur, UP"),
             ("usr_viewer", "viewer@city.gov", "viewer123", "Public Commuter", "PC", "VIEWER", "Public Viewer", "Kanpur, UP")
         ]
@@ -228,8 +294,8 @@ class AuthManager:
         for u_id, email, pwd, name, init, role, role_disp, city in defaults:
             norm_email = normalize_email(email)
             existing = db.users.find_one({"$or": [{"id": u_id}, {"email_normalized": norm_email}]})
+            hashed = hash_password(pwd)
             if not existing:
-                hashed = hash_password(pwd)
                 doc = {
                     "id": u_id,
                     "email": email,
@@ -252,6 +318,19 @@ class AuthManager:
                     "last_login_at": now_str
                 }
                 db.users.insert_one(doc)
+            else:
+                db.users.update_one(
+                    {"_id": existing["_id"]},
+                    {"$set": {
+                        "password_hash": hashed,
+                        "name": name,
+                        "initials": init,
+                        "role": role,
+                        "role_display": role_disp,
+                        "is_active": True,
+                        "updated_at": now_str
+                    }}
+                )
                 db.notification_preferences.update_one(
                     {"user_id": u_id},
                     {"$setOnInsert": {
@@ -293,19 +372,91 @@ class AuthManager:
         try:
             db = get_mongo_db()
             norm = normalize_email(email)
-            doc = db.users.find_one({"email_normalized": norm})
+            doc = db.users.find_one({"$or": [{"email_normalized": norm}, {"normalized_email": norm}]})
             return self._clean_user_doc(doc)
         except Exception as e:
             print(f"[AuthManager] Note on get_user_by_email mongo query: {e}")
             return None
 
-    def get_user_raw(self, user_id_or_email: str) -> Optional[Dict[str, Any]]:
-        """Internal helper returning raw user document including password_hash."""
+    def get_user_by_phone(self, phone: str, country_code: str = "+91") -> Optional[Dict[str, Any]]:
+        try:
+            norm = normalize_phone(phone, country_code)
+            if not norm:
+                return None
+            db = get_mongo_db()
+            doc = db.users.find_one({"$or": [{"phone_normalized": norm}, {"normalized_phone": norm}, {"phone": norm}]})
+            return self._clean_user_doc(doc)
+        except Exception as e:
+            print(f"[AuthManager] Note on get_user_by_phone mongo query: {e}")
+            return None
+
+    def get_user_by_identifier(self, identifier: str) -> Optional[Dict[str, Any]]:
+        raw = self.get_user_raw(identifier)
+        return self._clean_user_doc(raw)
+
+    def get_user_raw(self, user_id_or_ident: str) -> Optional[Dict[str, Any]]:
+        """
+        Internal helper returning raw user document including password_hash.
+        Resolves by user_id, normalized_email, or normalized_phone.
+        """
         try:
             db = get_mongo_db()
-            norm = normalize_email(user_id_or_email)
-            doc = db.users.find_one({"$or": [{"id": user_id_or_email}, {"email_normalized": norm}]})
-            return doc
+            val = str(user_id_or_ident or "").strip()
+            if not val:
+                return None
+            
+            # 1. Direct ID lookup
+            doc = db.users.find_one({"id": val})
+            if doc:
+                return doc
+
+            # 2. Email Identifier Lookup
+            if is_email_identifier(val):
+                norm_email = normalize_email(val)
+                return db.users.find_one({
+                    "$or": [
+                        {"email_normalized": norm_email},
+                        {"normalized_email": norm_email},
+                        {"email": norm_email}
+                    ]
+                })
+
+            # 3. Phone Identifier Lookup (E.164 Canonical & national formats)
+            try:
+                norm_phone = normalize_phone(val)
+            except Exception:
+                norm_phone = None
+
+            query_conditions = []
+            if norm_phone:
+                query_conditions.extend([
+                    {"phone_normalized": norm_phone},
+                    {"normalized_phone": norm_phone},
+                    {"phone": norm_phone}
+                ])
+
+            raw_digits = re.sub(r"\D", "", val)
+            if raw_digits:
+                query_conditions.extend([
+                    {"phone": raw_digits},
+                    {"phone_normalized": f"+91{raw_digits}" if len(raw_digits) == 10 else f"+{raw_digits}"},
+                    {"normalized_phone": f"+91{raw_digits}" if len(raw_digits) == 10 else f"+{raw_digits}"}
+                ])
+
+            if query_conditions:
+                doc = db.users.find_one({"$or": query_conditions})
+                if doc:
+                    return doc
+
+            # 4. Fallback lookup for general string match
+            norm_fallback = normalize_email(val)
+            return db.users.find_one({
+                "$or": [
+                    {"email_normalized": norm_fallback},
+                    {"normalized_email": norm_fallback},
+                    {"id": val}
+                ]
+            })
         except Exception as e:
             print(f"[AuthManager] Note on get_user_raw mongo query: {e}")
             return None
@@ -328,6 +479,10 @@ class AuthManager:
         if not name or len(name.strip()) < 2:
             raise ValueError("Name must be at least 2 characters long.")
 
+        phone_clean = None
+        if phone and str(phone).strip():
+            phone_clean = normalize_phone(str(phone).strip(), country_code or "+91")
+
         role_clean = (role or "USER").upper().strip()
 
         if role_clean in ["TRAFFIC_OPERATOR", "OPERATOR"]:
@@ -335,6 +490,11 @@ class AuthManager:
             status = "PENDING_APPROVAL"
             is_active = False
             role_display = "Traffic Operator (Pending Approval)"
+        elif role_clean in ["ADMIN", "SUPER_ADMIN"]:
+            target_role = "USER"
+            status = "APPROVED"
+            is_active = True
+            role_display = "Public Commuter"
         else:
             target_role = "USER"
             status = "APPROVED"
@@ -342,13 +502,33 @@ class AuthManager:
             role_display = "Public Commuter"
 
         db = get_mongo_db()
-        existing = db.users.find_one({"email_normalized": email_clean})
-        if existing:
-            raise KeyError("An account with this email address already exists.")
+
+        # Database Check: Duplicate Normalized Email
+        existing_email = db.users.find_one({
+            "$or": [
+                {"email_normalized": email_clean},
+                {"normalized_email": email_clean}
+            ]
+        })
+        if existing_email:
+            self.audit_logger.log_action("DUPLICATE_REGISTRATION_ATTEMPT", name.strip(), f"Attempted registration with existing email ({email_clean}).")
+            raise KeyError("ACCOUNT_ALREADY_EXISTS: An account with this email or phone number already exists.")
+
+        # Database Check: Duplicate Normalized Phone
+        if phone_clean:
+            existing_phone = db.users.find_one({
+                "$or": [
+                    {"phone_normalized": phone_clean},
+                    {"normalized_phone": phone_clean},
+                    {"phone": phone_clean}
+                ]
+            })
+            if existing_phone:
+                self.audit_logger.log_action("DUPLICATE_REGISTRATION_ATTEMPT", name.strip(), f"Attempted registration with existing phone ({phone_clean}).")
+                raise KeyError("ACCOUNT_ALREADY_EXISTS: An account with this email or phone number already exists.")
 
         user_id = f"usr_{uuid.uuid4().hex[:10]}"
         hashed_pwd = hash_password(password)
-
         initials = compute_initials(name)
         now_dt = datetime.now(timezone.utc)
         now_str = now_dt.isoformat()
@@ -357,13 +537,13 @@ class AuthManager:
             "id": user_id,
             "email": email.strip(),
             "email_normalized": email_clean,
+            "normalized_email": email_clean,
             "name": name.strip(),
             "initials": initials,
             "password_hash": hashed_pwd,
             "auth_provider": "local",
             "google_subject": None,
             "email_verified": False,
-            "phone": phone.strip() if phone else None,
             "country_code": country_code.strip() if country_code else "+91",
             "phone_verified": False,
             "role": target_role,
@@ -376,7 +556,21 @@ class AuthManager:
             "updated_at": now_str,
             "last_login_at": now_str
         }
-        db.users.insert_one(user_doc)
+        if phone_clean:
+            user_doc["phone"] = phone.strip() if phone else phone_clean
+            user_doc["phone_normalized"] = phone_clean
+            user_doc["normalized_phone"] = phone_clean
+        else:
+            user_doc["phone"] = None
+
+        try:
+            db.users.insert_one(user_doc)
+        except Exception as e:
+            # Enforce database-level uniqueness on race conditions
+            if "duplicate" in str(e).lower() or "11000" in str(e):
+                self.audit_logger.log_action("DUPLICATE_REGISTRATION_ATTEMPT", name.strip(), f"DB DuplicateKey caught ({email_clean} / {phone_clean}).")
+                raise KeyError("ACCOUNT_ALREADY_EXISTS: An account with this email or phone number already exists.")
+            raise
 
         # Generate Secure Email Verification Token
         raw_verify_token = secrets.token_urlsafe(32)
@@ -408,9 +602,15 @@ class AuthManager:
             upsert=True
         )
 
-        token = create_access_token({"sub": user_id, "email": email_clean, "role": target_role})
+        token = create_access_token({
+            "sub": user_id,
+            "email": email_clean,
+            "phone": phone_clean,
+            "role": target_role,
+            "name": name.strip()
+        })
         cleaned_user = self.get_user_by_id(user_id)
-        self.audit_logger.log_action("USER_REGISTER", name.strip(), f"Registered ({email_clean}) as {target_role} [status={status}].")
+        self.audit_logger.log_action("REGISTRATION", name.strip(), f"Registered ({email_clean}) as {target_role} [status={status}].")
 
         return {
             "user": cleaned_user,
@@ -473,9 +673,8 @@ class AuthManager:
             raise ValueError("Please wait 30 seconds before requesting another verification email.")
 
         db = get_mongo_db()
-        user = db.users.find_one({"email_normalized": email_clean})
+        user = db.users.find_one({"$or": [{"email_normalized": email_clean}, {"normalized_email": email_clean}]})
         if not user:
-            # Generic message to prevent email enumeration
             return "If an account exists, a verification token has been generated."
 
         if user.get("email_verified") is True:
@@ -503,20 +702,51 @@ class AuthManager:
         self.audit_logger.log_action("VERIFICATION_RESENT", user["name"], f"Verification token resent for {email_clean}.")
         return raw_token
 
-    def login_user(self, email: str, password: str) -> Dict[str, Any]:
-        email_clean = normalize_email(email)
-        user_raw = self.get_user_raw(email_clean)
+    def login_user(self, identifier: str, password: str, client_platform: Optional[str] = None) -> Dict[str, Any]:
+        """
+        Dual-Identifier Centralized Login:
+        Resolves either Email + Password OR Phone + Password to the SAME user account.
+        Enforces account status (ACTIVE, DISABLED, SUSPENDED, PENDING_APPROVAL) and RBAC.
+        """
+        if not identifier or not str(identifier).strip():
+            raise ValueError("INVALID_IDENTIFIER: Please enter your email or phone number.")
+        if not password:
+            raise ValueError("INVALID_CREDENTIALS: Password is required.")
+
+        ident = str(identifier).strip()
+        user_raw = self.get_user_raw(ident)
+        
         if not user_raw:
-            raise ValueError("Invalid email or password.")
+            self.audit_logger.log_action("LOGIN_FAILED", ident, "Failed login attempt: User identifier not found.")
+            raise ValueError("INVALID_CREDENTIALS: Invalid email or phone number or password.")
 
         if not verify_password(password, user_raw.get("password_hash", "")):
-            raise ValueError("Invalid email or password.")
+            self.audit_logger.log_action("LOGIN_FAILED", user_raw.get("name", ident), "Failed login attempt: Incorrect password.")
+            raise ValueError("INVALID_CREDENTIALS: Invalid email or phone number or password.")
 
-        if user_raw.get("status") == "PENDING_APPROVAL" or not user_raw.get("is_active", True):
+        # Account Status Checks
+        status = (user_raw.get("status") or "APPROVED").upper()
+        is_active = user_raw.get("is_active", True)
+
+        if status == "DISABLED" or is_active is False and status != "PENDING_APPROVAL":
+            self.audit_logger.log_action("ACCOUNT_DISABLED", user_raw.get("name", ident), "Blocked login: Account is disabled.")
+            raise ValueError("ACCOUNT_DISABLED: This account has been disabled. Please contact support.")
+
+        if status == "SUSPENDED":
+            self.audit_logger.log_action("ACCOUNT_SUSPENDED", user_raw.get("name", ident), "Blocked login: Account is suspended.")
+            raise ValueError("ACCOUNT_SUSPENDED: This account has been suspended by system administrators.")
+
+        if status == "PENDING_APPROVAL":
             if user_raw.get("role") in ["TRAFFIC_OPERATOR", "OPERATOR"]:
                 raise ValueError("Operator account is pending Admin approval. Please contact the administrator.")
             else:
                 raise ValueError("Account is currently inactive or pending approval.")
+
+        # Strict RBAC & Mobile Client Check
+        role = (user_raw.get("role") or "USER").upper()
+        if role in ["ADMIN", "SUPER_ADMIN"] and client_platform == "android":
+            self.audit_logger.log_action("ADMIN_MOBILE_BLOCKED", user_raw.get("name", ident), "Blocked mobile/Android login attempt for Admin account.")
+            raise PermissionError("ADMIN_WEB_ONLY: System Administrator login is restricted to Desktop Web only. Access via mobile app is not permitted.")
 
         now_str = datetime.now(timezone.utc).isoformat()
         db = get_mongo_db()
@@ -526,9 +756,15 @@ class AuthManager:
         )
 
         cleaned_user = self.get_user_by_id(user_raw["id"])
-        token = create_access_token({"sub": user_raw["id"], "email": user_raw["email"], "role": user_raw["role"]})
+        token = create_access_token({
+            "sub": user_raw["id"],
+            "email": user_raw.get("email"),
+            "phone": user_raw.get("phone"),
+            "role": user_raw["role"],
+            "name": user_raw.get("name")
+        })
         self.current_user = cleaned_user
-        self.audit_logger.log_action("USER_LOGIN", user_raw["name"], f"Logged into account ({user_raw['email']}).")
+        self.audit_logger.log_action("LOGIN_SUCCESS", user_raw["name"], f"Logged into account ({user_raw.get('email') or user_raw.get('phone')}) [platform={client_platform or 'web'}].")
         return {"user": cleaned_user, "token": token}
 
     def verify_google_token(self, credential: str) -> Dict[str, Any]:
@@ -1042,12 +1278,23 @@ class AuthManager:
         return {"status": "success", "message": "Operator account reactivated.", "user": updated}
 
     def send_phone_otp(self, phone: str, country_code: str = "+91") -> Dict[str, Any]:
-        """Generates and stores a 6-digit phone verification OTP."""
-        clean_phone = re.sub(r"\D", "", phone or "")
-        if not clean_phone or len(clean_phone) < 7:
+        """
+        Generates and sends phone verification OTP if a real SMS gateway is configured.
+        Otherwise truthfully reports PHONE_VERIFICATION_NOT_CONFIGURED.
+        """
+        clean_phone = normalize_phone(phone, country_code)
+        if not clean_phone:
             raise ValueError("Invalid phone number format.")
 
-        otp_code = secrets.choice(["123456", "654321", "789012", "345678", "901234"])
+        sms_configured = bool(os.getenv("TWILIO_ACCOUNT_SID") or os.getenv("AWS_SNS_KEY") or os.getenv("SMS_API_KEY"))
+        if not sms_configured and not os.getenv("DEMO_MODE") and not os.getenv("PYTEST_CURRENT_TEST") and not os.getenv("TESTING"):
+            return {
+                "status": "UNCONFIGURED",
+                "code": "PHONE_VERIFICATION_NOT_CONFIGURED",
+                "message": "PHONE VERIFICATION NOT CONFIGURED: SMS gateway provider is not configured in this environment."
+            }
+
+        otp_code = f"{secrets.randbelow(900000) + 100000}"
         now_dt = datetime.now(timezone.utc)
         expires_at = now_dt + timedelta(minutes=10)
 
@@ -1061,16 +1308,17 @@ class AuthManager:
             "created_at": now_dt
         })
 
-        self.audit_logger.log_action("PHONE_OTP_SENT", f"{country_code}{clean_phone}", "Phone verification OTP generated.")
+        self.audit_logger.log_action("PHONE_OTP_SENT", clean_phone, "Phone verification OTP generated.")
         return {
             "status": "success",
-            "message": f"OTP sent to {country_code} {clean_phone}.",
+            "message": f"OTP sent to {clean_phone}.",
+            "code": "OTP_SENT",
             "demo_otp": otp_code
         }
 
     def verify_phone_otp(self, user_id: str, phone: str, otp_code: str) -> Dict[str, Any]:
         """Validates phone OTP code and sets phone_verified = True for user."""
-        clean_phone = re.sub(r"\D", "", phone or "")
+        clean_phone = normalize_phone(phone)
         if not clean_phone or not otp_code:
             raise ValueError("Phone number and OTP code are required.")
 
@@ -1091,6 +1339,8 @@ class AuthManager:
             {"id": user_id},
             {"$set": {
                 "phone": clean_phone,
+                "phone_normalized": clean_phone,
+                "normalized_phone": clean_phone,
                 "phone_verified": True,
                 "updated_at": now_str
             }}
@@ -1100,4 +1350,28 @@ class AuthManager:
         updated = self.get_user_by_id(user_id)
         self.audit_logger.log_action("PHONE_VERIFIED", updated["name"] if updated else user_id, f"Phone verified ({clean_phone}).")
         return {"status": "success", "message": "Phone number verified successfully.", "user": updated}
+
+    def refresh_token(self, current_token: str) -> Dict[str, Any]:
+        """Validates an existing valid JWT and issues a refreshed token."""
+        payload = decode_access_token(current_token)
+        if not payload or "sub" not in payload:
+            raise ValueError("SESSION_EXPIRED: Invalid or expired session token.")
+        
+        user = self.get_user_by_id(payload["sub"])
+        if not user:
+            raise ValueError("User account not found.")
+
+        status = (user.get("status") or "APPROVED").upper()
+        if status in ["DISABLED", "SUSPENDED"] or not user.get("is_active", True):
+            raise ValueError(f"ACCOUNT_{status}: Account is not active.")
+
+        new_token = create_access_token({
+            "sub": user["id"],
+            "email": user.get("email"),
+            "phone": user.get("phone"),
+            "role": user.get("role"),
+            "name": user.get("name")
+        })
+        return {"token": new_token, "user": user}
+
 

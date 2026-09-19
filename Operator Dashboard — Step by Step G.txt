@@ -1,0 +1,171 @@
+Operator Dashboard — Step by Step Guide
+🔐 Step 1: Login as Operator
+Pehle ek Traffic Operator account chahiye. Abhi jo run_demo.py chal raha hai, usme demo users hote hain.
+
+Option A — Register karein:
+
+POST /api/v1/auth/register
+{
+  "email": "operator@trafficai.com",
+  "password": "Test@1234",
+  "name": "Ankit Operator",
+  "role": "TRAFFIC_OPERATOR"
+}
+Option B — Demo login (agar run_demo seeds karta hai):
+
+Apne browser mein jaao aur Login karein. Role TRAFFIC_OPERATOR hona chahiye — tabhi sidebar mein operator menu dikhega.
+
+🖥️ Step 2: Operator Sidebar Dikhega
+Login ke baad sidebar mein ye sections dikhenge:
+
+TRAFFIC OPERATIONS
+├── Operations Overview      ← Dashboard KPIs
+├── Live Traffic Map
+├── Signal Intelligence      ← Signal recommendations (DB se)
+├── Emergency Corridors      ← Emergency plans (DB se)
+├── CCTV / Cameras           ← Real cameras (DB se)
+└── Operations Analytics     ← Live analytics
+📊 Step 3: Operations Overview (Dashboard KPIs)
+Jab Operations Overview pe click karein — ye API call hoti hai:
+
+GET /api/v1/operator/dashboard
+Authorization: Bearer <your_jwt_token>
+Response mein aata hai:
+
+json
+{
+  "kpis": {
+    "active_incidents": 2,       ← DB se
+    "pending_review": 5,         ← DB se
+    "high_congestion_corridors": 3, ← Live simulator se
+    "active_road_closures": 1,   ← DB se
+    "active_alerts": 4           ← SQLite traffic_alerts se
+  },
+  "operator": {
+    "name": "Ankit Operator",
+    "assigned_zones": ["Zone A", "Zone B"]
+  }
+}
+🚨 Step 4: Incidents Manage Karna
+Incidents dekhna:
+
+GET /api/v1/operator/incidents
+Incident verify karna (pending → verified):
+
+POST /api/v1/operator/incidents/verify
+{ "incident_id": "INC-ABC123", "status": "VERIFIED", "public_note": "Confirmed by patrol" }
+Incident resolve karna:
+
+POST /api/v1/operator/incidents/resolve
+{ "incident_id": "INC-ABC123", "status": "RESOLVED" }
+Dashboard pe: har incident card pe ✅ Verify, ❌ Reject, ⬆ Escalate, ✓ Resolve buttons honge.
+
+📢 Step 5: Traffic Alert Publish Karna
+POST /api/v1/operator/alerts/publish
+{
+  "title": "Road Block - Mall Road",
+  "message": "Avoid Mall Road due to waterlogging",
+  "severity": "HIGH",
+  "location": "Mall Road, Kanpur"
+}
+Alert SQLite DB mein save hota hai
+Saare commuter users ko notification jaati hai (MongoDB se)
+Dashboard pe Published Alerts section mein dikhta hai
+Wahan se Revoke ya Mark Expired kar sakte ho
+📷 Step 6: CCTV Cameras
+Cameras dekhna:
+
+GET /api/v1/operator/cameras
+Nayi camera add karna:
+
+POST /api/v1/operator/cameras
+{
+  "name": "Civil Lines North Cam",
+  "location": "Civil Lines Junction",
+  "latitude": 26.4671,
+  "longitude": 80.3498,
+  "stream_url": "http://your-cam-url/stream",
+  "stream_protocol": "HLS"
+}
+Camera test karna (real HTTP probe):
+
+POST /api/v1/operator/cameras/CAM-001/test
+→ Ye actually stream URL pe connect karke dekhta hai — fake nahi!
+
+Dashboard pe har camera card pe 🛰 Test button hai.
+
+🚦 Step 7: Signal Recommendations
+GET /api/v1/operator/signals
+AI recommendations aati hain DB se. Har recommendation pe:
+
+✅ Approve → POST /api/v1/operator/signals/{id}/approve
+❌ Reject → POST /api/v1/operator/signals/{id}/reject
+⚠️ Ye simulation only hai — physical signal change nahi hota
+
+🚑 Step 8: Emergency Corridor
+POST /api/v1/operator/emergency-corridors/calculate
+{
+  "vehicle_type": "AMBULANCE",
+  "origin": "Kanpur Central Hospital",
+  "destination": "GSVM Medical College",
+  "origin_lat": 26.4499,
+  "origin_lon": 80.3319,
+  "dest_lat": 26.4580,
+  "dest_lon": 80.3400
+}
+Agar TomTom API key configured hai → real route ETA milta hai. Warna manual ETA store hota hai.
+
+🔌 Step 9: WebSocket Real-time Updates
+Operator dashboard automatically connect hota hai:
+
+ws://localhost:8000/api/v1/ws/operator?token=<jwt>
+Ye events aate rehte hain automatically:
+
+Event	Kab aata hai	Kya karta hai
+operator.connected	Connection pe	Handshake confirm
+traffic.updated	Har 5 sec	TomTom status update
+dashboard.kpis_updated	Har 10 sec	KPI numbers auto-refresh
+camera.health_snapshot	Har 30 sec	Camera status badges update
+Header mein 🟢 WS LIVE badge dikhega jab connected ho.
+
+⚙️ Step 10: Preferences Save Karna
+PUT /api/v1/operator/preferences
+{
+  "theme": "dark",
+  "units": "metric",
+  "telemetry_refresh_interval": 5
+}
+Ye SQLite mein save hota hai — next login pe bhi yaad rehta hai.
+
+📋 Step 11: Audit Log Dekhna
+GET /api/v1/operator/audit-log
+Har action automatically log hota hai:
+
+json
+{
+  "action": "INCIDENT_VERIFIED",
+  "entity_type": "incident",
+  "entity_id": "INC-ABC123",
+  "details": "Status updated to VERIFIED. Note: Patrol confirmed",
+  "timestamp": "2026-09-17T06:30:00Z",
+  "user_name": "Ankit Operator"
+}
+🏥 System Health Check
+GET /api/v1/operator/system-health
+Real checks karta hai:
+
+SQLite ping
+MongoDB latency
+TomTom API status
+WebSocket connection count
+Camera online/offline ratio
+Quick Start
+Abhi try karne ke liye:
+
+Browser mein jao: http://localhost:8000
+Register/Login with role TRAFFIC_OPERATOR
+Operations Overview pe click karo
+KPIs should load from DB automatically
+CCTV / Cameras section mein 4 seeded cameras dikhenge
+Koi alert publish karo — Published Alerts mein dikhega
+Koi specific step mein problem ho toh batao! 🚀

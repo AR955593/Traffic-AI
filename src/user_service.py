@@ -458,7 +458,12 @@ class UserService:
     def mark_notification_read(self, user_id: str, notification_id: str) -> bool:
         now_str = datetime.now(timezone.utc).isoformat()
         res = self.db.notifications.update_one(
-            {"recipient_user_id": user_id, "$or": [{"id": notification_id}, {"notification_id": notification_id}]},
+            {
+                "$and": [
+                    {"$or": [{"user_id": user_id}, {"recipient_user_id": user_id}]},
+                    {"$or": [{"id": notification_id}, {"notification_id": notification_id}]}
+                ]
+            },
             {"$set": {"read_at": now_str, "read": True}}
         )
         return res.modified_count > 0 or res.matched_count > 0
@@ -476,6 +481,11 @@ class UserService:
         return res.modified_count
 
     def delete_notification(self, user_id: str, notification_id: str) -> bool:
-        res = self.db.notifications.delete_one({"recipient_user_id": user_id, "$or": [{"id": notification_id}, {"notification_id": notification_id}]})
+        res = self.db.notifications.delete_one({
+            "$and": [
+                {"$or": [{"user_id": user_id}, {"recipient_user_id": user_id}]},
+                {"$or": [{"id": notification_id}, {"notification_id": notification_id}]}
+            ]
+        })
         return res.deleted_count > 0
 

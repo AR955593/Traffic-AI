@@ -20,7 +20,7 @@ class OpenWeatherConnector:
         self.api_key = api_key or os.getenv("OPENWEATHER_API_KEY")
         self.base_url = "https://api.openweathermap.org/data/2.5/weather"
 
-    def get_weather(self, lat: float = 51.5074, lon: float = -0.1278) -> dict:
+    def get_weather(self, lat: float = 26.4499, lon: float = 80.3319) -> dict:
         if self.api_key and self.api_key != "YOUR_OPENWEATHER_API_KEY":
             try:
                 params = {
@@ -43,14 +43,15 @@ class OpenWeatherConnector:
                     return {
                         "status": "ONLINE",
                         "mode": "LIVE",
-                        "temperature_c": round(data.get("main", {}).get("temp", 20.0), 1),
+                        "temperature_c": round(data.get("main", {}).get("temp", 28.0), 1),
                         "humidity_percent": data.get("main", {}).get("humidity", 55),
                         "wind_speed_kmh": round(data.get("wind", {}).get("speed", 3.0) * 3.6, 1),
                         "precipitation_mm": precip,
                         "visibility_km": round(data.get("visibility", 10000) / 1000.0, 1),
                         "weather_condition": weather_main,
                         "description": description.title(),
-                        "city_name": data.get("name", "Unknown Location"),
+                        "city_name": data.get("name", "Current Location"),
+                        "city": data.get("name", "Current Location"),
                         "source": "OpenWeather API (Live)",
                         "timestamp": datetime.now(timezone.utc).isoformat()
                     }
@@ -59,7 +60,41 @@ class OpenWeatherConnector:
             except Exception as e:
                 print(f"[OpenWeatherConnector] Exception: {e}")
 
-        # Fallback if key missing or request fails
+        # Secondary fallback to Open-Meteo real-time weather
+        try:
+            om_url = f"https://api.open-meteo.com/v1/forecast?latitude={lat}&longitude={lon}&current_weather=true"
+            om_res = requests.get(om_url, timeout=4)
+            if om_res.status_code == 200:
+                om_data = om_res.json()
+                if "current_weather" in om_data:
+                    cw = om_data["current_weather"]
+                    code = cw.get("weathercode", 0)
+                    cond = "Clear"
+                    if code >= 1 and code <= 3: cond = "Partly Cloudy"
+                    elif code >= 45 and code <= 48: cond = "Foggy"
+                    elif code >= 51 and code <= 67: cond = "Rain"
+                    elif code >= 71 and code <= 86: cond = "Snow"
+                    elif code >= 95: cond = "Thunderstorm"
+                    
+                    return {
+                        "status": "ONLINE",
+                        "mode": "LIVE",
+                        "temperature_c": round(cw.get("temperature", 28.0), 1),
+                        "humidity_percent": 50,
+                        "wind_speed_kmh": round(cw.get("windspeed", 10.0), 1),
+                        "precipitation_mm": 0.0,
+                        "visibility_km": 10.0,
+                        "weather_condition": cond,
+                        "description": cond,
+                        "city_name": "Current Location",
+                        "city": "Current Location",
+                        "source": "Open-Meteo Live",
+                        "timestamp": datetime.now(timezone.utc).isoformat()
+                    }
+        except Exception:
+            pass
+
+        # Fallback if request fails
         return {
             "status": "UNAVAILABLE",
             "mode": "UNAVAILABLE",
@@ -70,6 +105,8 @@ class OpenWeatherConnector:
             "visibility_km": None,
             "weather_condition": "Unavailable",
             "description": "Weather Data Unavailable",
+            "city_name": "Current Location",
+            "city": "Current Location",
             "source": "OpenWeather API",
             "timestamp": datetime.now(timezone.utc).isoformat()
         }

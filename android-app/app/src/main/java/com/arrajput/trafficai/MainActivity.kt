@@ -59,8 +59,8 @@ class MainActivity : ComponentActivity() {
         setupBackNavigation()
         requestLocationPermissions()
 
-        val PRODUCTION_WEB_URL = "https://trafficai-taupe.vercel.app"
-        webView.loadUrl(PRODUCTION_WEB_URL)
+        val LOCAL_ASSET_URL = "file:///android_asset/index.html"
+        webView.loadUrl(LOCAL_ASSET_URL)
     }
 
     private fun configureWebView() {
@@ -71,14 +71,15 @@ class MainActivity : ComponentActivity() {
         settings.setGeolocationEnabled(true)
         settings.allowFileAccess = true
         settings.allowContentAccess = true
+        settings.allowFileAccessFromFileURLs = true
+        settings.allowUniversalAccessFromFileURLs = true
         settings.javaScriptCanOpenWindowsAutomatically = true
         settings.setSupportMultipleWindows(true)
         settings.mixedContentMode = WebSettings.MIXED_CONTENT_NEVER_ALLOW
-        settings.useWideViewPort = true
-        settings.loadWithOverviewMode = true
-        settings.cacheMode = WebSettings.LOAD_DEFAULT
+        settings.useWideViewPort = false
+        settings.loadWithOverviewMode = false
+        settings.cacheMode = WebSettings.LOAD_NO_CACHE
 
-        // Do NOT remove "; wv" from UA — it was a workaround; native SDK handles auth now
         // Keep standard WebView UA for normal web content
         val defaultUa = settings.userAgentString
         settings.userAgentString = defaultUa.replace("; wv", "")
@@ -88,7 +89,7 @@ class MainActivity : ComponentActivity() {
 
         webView.webViewClient = object : WebViewClient() {
             override fun shouldOverrideUrlLoading(view: WebView?, url: String?): Boolean {
-                if (url != null && (url.startsWith("https://trafficai-taupe.vercel.app") || url.startsWith("file:"))) {
+                if (url != null && (url.startsWith("file:") || url.startsWith("https://"))) {
                     return false
                 }
                 return false

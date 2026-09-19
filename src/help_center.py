@@ -8,8 +8,11 @@ import os
 import uuid
 from datetime import datetime, timezone
 from typing import Dict, Any, List, Optional
-from pymongo import ASCENDING, DESCENDING
-from src.mongo_db import get_mongo_db
+try:
+    from mongo_db import get_mongo_db
+except ImportError:
+    from src.mongo_db import get_mongo_db
+from pymongo import DESCENDING
 
 # Pre-defined, verified Knowledge Base articles
 KNOWLEDGE_BASE_ARTICLES: List[Dict[str, Any]] = [

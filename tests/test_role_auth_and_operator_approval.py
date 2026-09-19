@@ -29,12 +29,12 @@ def test_password_strength_policy():
     # 1. Less than 8 characters -> Fail
     with pytest.raises(ValueError) as exc:
         auth.register_user("pwd_short@example.com", "Pass1!", "Short Pwd")
-    assert "between 8 and 16" in str(exc.value)
+    assert "between 8 and" in str(exc.value)
 
-    # 2. Greater than 16 characters -> Fail
+    # 2. Greater than 64 characters -> Fail
     with pytest.raises(ValueError) as exc:
-        auth.register_user("pwd_long@example.com", "PasswordSuperLong123!Extra", "Long Pwd")
-    assert "between 8 and 16" in str(exc.value)
+        auth.register_user("pwd_long@example.com", "PasswordSuperLong123!ExtraPasswordSuperLong123!ExtraPasswordSuperLong123!Extra", "Long Pwd")
+    assert "between 8 and" in str(exc.value)
 
     # 3. Missing uppercase letter -> Fail
     with pytest.raises(ValueError) as exc:
@@ -77,7 +77,7 @@ def test_operator_registration_approval_and_login_flow():
     op_pass = "OperatorPass1!"
     op_name = "Kanpur Traffic Operator"
     db = get_mongo_db()
-    db.users.delete_many({"email_normalized": op_email.lower()})
+    db.users.delete_many({"$or": [{"email_normalized": op_email.lower()}, {"normalized_email": op_email.lower()}, {"phone": "9876543210"}, {"phone_normalized": "+919876543210"}]})
 
     # 1. Register as TRAFFIC_OPERATOR
     reg_res = auth.register_user(
