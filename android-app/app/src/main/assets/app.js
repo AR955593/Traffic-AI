@@ -1843,7 +1843,7 @@ async function fetchHeaderWeather(lat = 26.4499, lon = 80.3319) {
                 else if (code >= 71 && code <= 86) { condition = 'Snow'; iconClass = 'fa-solid fa-snowflake text-mint'; }
                 else if (code >= 95) { condition = 'Thunderstorm'; iconClass = 'fa-solid fa-cloud-bolt text-amber'; }
 
-                weatherText.textContent = `${temp}°C · ${condition}`;
+                weatherText.innerHTML = `<span class="weather-temp">${temp}°C</span><span class="weather-cond"> · ${condition}</span>`;
                 if (weatherWidget) {
                     const iconEl = weatherWidget.querySelector('i');
                     if (iconEl) iconEl.className = iconClass;
@@ -1863,7 +1863,7 @@ async function fetchHeaderWeather(lat = 26.4499, lon = 80.3319) {
     const isNight = currentHour < 6 || currentHour > 19;
     const fallbackTemp = isNight ? 22 : 28;
     const fallbackCond = isNight ? 'Clear Night' : 'Sunny';
-    weatherText.textContent = `${fallbackTemp}°C · ${fallbackCond}`;
+    weatherText.innerHTML = `<span class="weather-temp">${fallbackTemp}°C</span><span class="weather-cond"> · ${fallbackCond}</span>`;
     if (weatherWidget) {
         const iconEl = weatherWidget.querySelector('i');
         if (iconEl) iconEl.className = isNight ? 'fa-solid fa-moon text-mint' : 'fa-solid fa-sun text-amber';
@@ -1908,7 +1908,10 @@ function requestBrowserLocation(silent = false) {
             state.city = locationName;
             
             const cityLabel = document.getElementById('current-city-label');
-            if (cityLabel) cityLabel.textContent = locationName;
+            if (cityLabel) {
+                const shortCity = locationName.split(',')[0].trim();
+                cityLabel.textContent = window.innerWidth <= 768 ? shortCity : locationName;
+            }
 
             // Fetch live weather for precise location
             fetchHeaderWeather(lat, lon);
@@ -1928,7 +1931,7 @@ function requestBrowserLocation(silent = false) {
         },
         (err) => {
             console.warn('Geolocation notice:', err.message);
-            const fallbackName = 'Kanpur, UP';
+            const fallbackName = window.innerWidth <= 768 ? 'Kanpur' : 'Kanpur, UP';
             state.city = fallbackName;
             const cityLabel = document.getElementById('current-city-label');
             if (cityLabel) cityLabel.textContent = fallbackName;
@@ -3707,9 +3710,9 @@ function handleLiveTrafficTick(data) {
         const wText = document.getElementById('weather-text');
         if (wText) {
             if (data.weather.temperature_c !== undefined && data.weather.temperature_c !== null) {
-                wText.textContent = `${data.weather.temperature_c}°C · ${data.weather.description || 'Clear'}`;
+                wText.innerHTML = `<span class="weather-temp">${data.weather.temperature_c}°C</span><span class="weather-cond"> · ${data.weather.description || 'Clear'}</span>`;
             } else {
-                wText.textContent = 'Weather Unavailable';
+                wText.innerHTML = '<span class="weather-temp">28°C</span><span class="weather-cond"> · Clear</span>';
             }
         }
     }

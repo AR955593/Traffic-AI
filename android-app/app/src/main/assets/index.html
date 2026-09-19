@@ -39,7 +39,7 @@
     </script>
 
     <!-- Custom Application Styles -->
-    <link rel="stylesheet" href="styles.css?v=6.0.5">
+    <link rel="stylesheet" href="styles.css?v=6.0.6">
 </head>
 
 <body class="theme-dark">
@@ -484,7 +484,7 @@
 
                     <div class="city-selector-badge" id="city-selector-btn" title="Current Location">
                         <i class="fa-solid fa-location-dot text-teal"></i>
-                        <span id="current-city-label">Kanpur Nagar, India</span>
+                        <span id="current-city-label">Kanpur</span>
                     </div>
 
                     <div class="pill-badge pill-live" id="traffic-source-badge">
@@ -539,14 +539,9 @@
                         <i class="fa-solid fa-server text-mint"></i>
                     </button>
 
-                    <!-- MOBILE SEARCH BUTTON (Visible only on mobile screens) -->
-                    <button class="icon-btn mobile-only-header-btn" id="btn-mobile-search-toggle" title="Search">
-                        <i class="fa-solid fa-magnifying-glass"></i>
-                    </button>
-
                     <div class="weather-widget" id="header-weather-widget" title="Live Weather">
                         <i class="fa-solid fa-sun text-amber"></i>
-                        <span id="weather-text">30°C · Clear</span>
+                        <span id="weather-text"><span class="weather-temp">28°C</span><span class="weather-cond"> · Clear</span></span>
                     </div>
 
                     <button class="icon-btn" id="btn-refresh" title="Refresh Live State">
@@ -4871,7 +4866,7 @@
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
     <!-- Core App Script -->
-    <script src="app.js?v=6.0.5"></script>
+    <script src="app.js?v=6.0.6"></script>
 </body>
 
 </html>

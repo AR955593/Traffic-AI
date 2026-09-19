@@ -2503,9 +2503,9 @@ table, .admin-table, .custom-table, .data-table {
     }
 
     .city-selector-badge {
-        max-width: 78px;
-        padding: 3px 6px;
-        font-size: 10.5px;
+        max-width: 68px;
+        padding: 2px 5px;
+        font-size: 10px;
         font-weight: 600;
         white-space: nowrap;
         overflow: hidden;
@@ -2514,14 +2514,10 @@ table, .admin-table, .custom-table, .data-table {
         border-radius: 6px;
     }
 
-    .pill-badge.pill-live {
-        padding: 2px 5px;
-        font-size: 8.5px;
-        font-weight: 700;
-        flex-shrink: 0;
-        gap: 3px;
-        display: inline-flex;
-        align-items: center;
+    /* On mobile, hide the bulky System Online / Live pill to make room for buttons */
+    .pill-badge.pill-live,
+    #traffic-source-badge {
+        display: none !important;
     }
 
     /* On mobile, collapse search into an overlay or icon to prevent header cutoff */
@@ -2586,7 +2582,7 @@ table, .admin-table, .custom-table, .data-table {
     }
 
     .header-right .mobile-only-header-btn {
-        display: flex !important;
+        display: none !important;
     }
 
     .header-right .icon-btn {
@@ -2596,11 +2592,13 @@ table, .admin-table, .custom-table, .data-table {
         min-height: 28px;
         font-size: 12px;
         padding: 0;
-        display: flex;
+        display: flex !important;
         align-items: center;
         justify-content: center;
         border-radius: 6px;
         flex-shrink: 0;
+        visibility: visible !important;
+        opacity: 1 !important;
     }
 
     .weather-widget,
@@ -2608,9 +2606,9 @@ table, .admin-table, .custom-table, .data-table {
     .header-right .weather-widget {
         display: inline-flex !important;
         align-items: center;
-        gap: 4px;
+        gap: 3px;
         padding: 2px 6px;
-        font-size: 10.5px;
+        font-size: 11px;
         font-weight: 600;
         border-radius: 12px;
         background: rgba(255, 255, 255, 0.08);
@@ -2624,6 +2622,16 @@ table, .admin-table, .custom-table, .data-table {
         opacity: 1 !important;
         pointer-events: auto !important;
         box-sizing: border-box;
+    }
+
+    /* Hide long weather text on mobile, keep only temperature */
+    #weather-text .weather-cond {
+        display: none !important;
+    }
+
+    #weather-text .weather-temp {
+        display: inline !important;
+        font-weight: 700;
     }
 
     .weather-widget i,
@@ -5228,6 +5236,15 @@ body.theme-dark .dev-title-badge {
         box-sizing: border-box !important;
     }
 
+    #weather-text .weather-cond {
+        display: none !important;
+    }
+
+    #weather-text .weather-temp {
+        display: inline !important;
+        font-weight: 700;
+    }
+
     body.theme-light .weather-widget,
     body.theme-light #header-weather-widget,
     body.theme-light #weather-text,
@@ -5236,6 +5253,13 @@ body.theme-dark .dev-title-badge {
         border-color: rgba(32, 53, 49, 0.18) !important;
         color: #0f172a !important;
     }
+}
+
+@media (min-width: 1025px) {
+    #weather-text .weather-cond {
+        display: inline !important;
+    }
+}
 
     /* Mobile KPI Bar: Horizontal Swipe Strip with Fixed Card Width */
     .kpi-bar,

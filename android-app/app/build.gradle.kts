@@ -14,8 +14,8 @@ android {
         applicationId = "com.arrajput.trafficai"
         minSdk = 24
         targetSdk = 36
-        versionCode = 20024
-        versionName = "2.0.2.4"
+        versionCode = 20025
+        versionName = "2.0.2.5"
     }
 
     signingConfigs {
