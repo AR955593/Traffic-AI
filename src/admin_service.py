@@ -12,7 +12,11 @@ import time
 import uuid
 import datetime
 from typing import Dict, Any, List, Optional
-import httpx
+
+try:
+    import httpx
+except ImportError:
+    httpx = None
 
 from src.mongo_db import get_mongo_db, get_mongo_health
 
