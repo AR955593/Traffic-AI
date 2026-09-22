@@ -14,8 +14,13 @@ DB_PATH = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "data", 
 
 def get_db_connection():
     os.makedirs(os.path.dirname(DB_PATH), exist_ok=True)
-    conn = sqlite3.connect(DB_PATH)
+    conn = sqlite3.connect(DB_PATH, timeout=30.0)
     conn.row_factory = sqlite3.Row
+    try:
+        conn.execute("PRAGMA journal_mode=WAL;")
+        conn.execute("PRAGMA busy_timeout=5000;")
+    except Exception:
+        pass
     return conn
 
 def init_db():

@@ -34,6 +34,7 @@ from datetime import datetime, timezone, timedelta
 from typing import Dict, List, Any, Optional
 
 from mongo_db import get_mongo_db, init_mongo_indexes
+from pymongo.errors import PyMongoError, ServerSelectionTimeoutError
 
 # JWT Configuration
 IS_PRODUCTION = os.getenv("ENV", "").lower() in ["production", "prod"] or os.getenv("VERCEL") == "1" or os.getenv("RENDER") == "1" or os.getenv("ENVIRONMENT", "").lower() in ["production", "prod"]
@@ -364,6 +365,8 @@ class AuthManager:
             db = get_mongo_db()
             doc = db.users.find_one({"id": user_id})
             return self._clean_user_doc(doc)
+        except (ServerSelectionTimeoutError, PyMongoError):
+            raise
         except Exception as e:
             print(f"[AuthManager] Note on get_user_by_id mongo query: {e}")
             return None

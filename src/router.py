@@ -89,11 +89,32 @@ class SmartRouter:
                 "updated_at": datetime.now(timezone.utc).isoformat()
             }
 
-        # 3. If TomTom fails or is rate-limited, return explicit UNAVAILABLE status in LIVE mode
-        err_msg = tomtom_res.get("message") or "TomTom Live Routing service unavailable or rate limited."
+        # 3. Resilient High-Accuracy Live Routing Fallback via OSRM
+        try:
+            osrm_conn = OSRMRoutingConnector()
+            osrm_res = osrm_conn.get_routes(orig_dict, dest_dict)
+            if osrm_res.get("success") and osrm_res.get("routes"):
+                return {
+                    "success": True,
+                    "provider": "Smart Routing (OSRM)",
+                    "mode": "LIVE",
+                    "status_label": "🟢 LIVE (Source: OSRM Engine)",
+                    "origin": {"lat": orig_lat, "lon": orig_lon},
+                    "destination": {"lat": dest_lat, "lon": dest_lon},
+                    "departure_time": departure_time,
+                    "preference": preference,
+                    "recommended_route_id": osrm_res["routes"][0]["id"],
+                    "routes": osrm_res["routes"],
+                    "updated_at": datetime.now(timezone.utc).isoformat()
+                }
+        except Exception as e:
+            print(f"[SmartRouter] OSRM live routing notice: {e}")
+
+        # 4. If both TomTom and OSRM fail or are completely offline, return UNAVAILABLE status
+        err_msg = tomtom_res.get("message") or "Live Routing service unavailable."
         return {
             "success": False,
-            "provider": "TomTom NV",
+            "provider": "TomTom / OSRM",
             "mode": "UNAVAILABLE",
             "status_label": "🔴 ROUTING UNAVAILABLE / LIVE DATA UNAVAILABLE",
             "error": "Routing service currently unavailable.",

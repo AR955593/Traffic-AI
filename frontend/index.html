@@ -39,7 +39,7 @@
     </script>
 
     <!-- Custom Application Styles -->
-    <link rel="stylesheet" href="styles.css?v=6.0.6">
+    <link rel="stylesheet" href="styles.css?v=6.1.1">
 </head>
 
 <body class="theme-dark">
@@ -493,19 +493,6 @@
                     </div>
                 </div>
 
-                <div class="header-center" id="header-center-search">
-                    <!-- GLOBAL SEARCH BOX -->
-                    <div class="header-search-container">
-                        <button class="mobile-search-close-btn" id="btn-close-mobile-search" aria-label="Close search">
-                            <i class="fa-solid fa-arrow-left"></i>
-                        </button>
-                        <i class="fa-solid fa-magnifying-glass header-search-icon"></i>
-                        <input type="text" class="header-search-input" id="global-search-input" placeholder="Search users, operators, roads, cameras, incidents..." autocomplete="off">
-                        <div class="search-dropdown-menu" id="global-search-dropdown">
-                            <!-- Injected dynamically by app.js -->
-                        </div>
-                    </div>
-                </div>
 
                 <div class="header-right">
                     <!-- GLOBAL QUICK ACTIONS (OPERATOR ONLY) -->
@@ -1171,11 +1158,35 @@
                                 <i class="fa-solid fa-expand" id="icon-map-fullscreen"></i>
                             </button>
 
-                            <!-- Dedicated Map Controls: GPS Recenter Button (Bottom-Left) -->
-                            <button class="map-square-btn btn-map-recenter" id="btn-map-recenter"
-                                title="Recenter on My GPS Location" aria-label="Recenter on GPS">
-                                <i class="fa-solid fa-location-crosshairs"></i>
-                            </button>
+                            <!-- Dedicated Map Controls: GPS Recenter + Zoom Buttons (Bottom-Left cluster) -->
+                            <div class="map-bottom-left-controls">
+                                <button class="map-square-btn btn-map-recenter" id="btn-map-recenter"
+                                    title="Recenter on My GPS Location" aria-label="Recenter on GPS">
+                                    <i class="fa-solid fa-location-crosshairs"></i>
+                                </button>
+                                <button class="map-square-btn btn-map-zoom-in" id="btn-map-zoom-in"
+                                    title="Zoom In" aria-label="Zoom In">
+                                    <i class="fa-solid fa-plus"></i>
+                                </button>
+                                <button class="map-square-btn btn-map-zoom-out" id="btn-map-zoom-out"
+                                    title="Zoom Out" aria-label="Zoom Out">
+                                    <i class="fa-solid fa-minus"></i>
+                                </button>
+                            </div>
+
+                            <!-- Real-Time Vehicle Speed HUD Badge (Bottom-Left) - Only visible when running -->
+                            <div class="map-vehicle-speed-badge" id="map-vehicle-speed-badge" title="Live Vehicle Speed (Dynamic GPS & Running Corridor)" style="display:none;">
+                                <div class="speed-badge-header">
+                                    <span class="speed-pulse-dot"></span>
+                                    <span class="speed-badge-label">SPEED</span>
+                                </div>
+                                <div class="speed-badge-body">
+                                    <i class="fa-solid fa-gauge-high speed-gauge-icon"></i>
+                                    <span class="speed-value" id="map-vehicle-speed-val">0</span>
+                                    <span class="speed-unit">km/h</span>
+                                </div>
+                                <div class="speed-status-subtext" id="map-vehicle-speed-status">Live Running</div>
+                            </div>
 
                             <!-- Map Layers Toggle Button (Bottom-Right) -->
                             <button class="map-square-btn btn-map-layers" id="btn-map-layers-toggle"
@@ -1372,13 +1383,21 @@
 
                         <!-- Right Detail Panel (Desktop) / Bottom Sheet (Mobile) -->
                         <aside class="detail-drawer" id="detail-drawer">
-                            <div class="drawer-handle" id="drawer-handle"></div>
+                            <!-- Sticky header: drag handle + tabs never scroll away -->
+                            <div class="drawer-sticky-header" id="drawer-sticky-header">
+                                <div class="drawer-handle-zone" id="drawer-handle-zone" title="Drag up or down to resize sheet" aria-label="Resize sheet handle">
+                                    <div class="drawer-handle" id="drawer-handle"></div>
+                                </div>
 
-                            <div class="drawer-tabs">
-                                <button class="drawer-tab active" data-tab="tab-road-detail">Road Detail</button>
-                                <button class="drawer-tab" data-tab="tab-route-summary">Route Compare</button>
-                                <button class="drawer-tab" data-tab="tab-incidents-list">Incidents</button>
+                                <div class="drawer-tabs">
+                                    <button class="drawer-tab active" data-tab="tab-road-detail">Road Detail</button>
+                                    <button class="drawer-tab" data-tab="tab-route-summary">Route Compare</button>
+                                    <button class="drawer-tab" data-tab="tab-incidents-list">Incidents</button>
+                                </div>
                             </div>
+
+                            <!-- Scrollable tab content area (tabs header above stays sticky) -->
+                            <div class="drawer-tab-inner-scroll" id="drawer-tab-inner-scroll">
 
                             <!-- Tab 1: Road Detail -->
                             <div class="drawer-tab-content active" id="tab-road-detail">
@@ -1486,6 +1505,7 @@
                                     <!-- Injected via app.js -->
                                 </div>
                             </div>
+                            </div><!-- /drawer-tab-inner-scroll -->
                         </aside>
                     </div>
                 </div>
@@ -4866,7 +4886,7 @@
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
     <!-- Core App Script -->
-    <script src="app.js?v=6.0.6"></script>
+    <script src="app.js?v=6.1.1"></script>
 </body>
 
 </html>

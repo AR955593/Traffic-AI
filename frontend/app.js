@@ -40,6 +40,7 @@ const state = {
     mapPickMode: null, // 'A' | 'B' | null
     pendingPickCoord: null, // { lat, lon, name }
     
+    userHasInteractedWithMap: false,
     segments: {},
     vehicles: [],
     incidents: [],
@@ -116,6 +117,37 @@ function showRouteFormError(message) {
         showToast(message, 'warning');
     }
 }
+
+// =========================================================
+// TIME & DURATION FORMATTERS (Hours & Minutes)
+// e.g., 78 min -> 1 hr 18 min, 661 min -> 11 hr 1 min
+// =========================================================
+function formatDuration(minutes) {
+    if (minutes === null || minutes === undefined || isNaN(minutes)) return '--';
+    const totalMin = Math.round(Number(minutes));
+    if (totalMin <= 0) return '0 min';
+    if (totalMin < 60) return `${totalMin} min`;
+    const hrs = Math.floor(totalMin / 60);
+    const remMin = totalMin % 60;
+    return remMin > 0 ? `${hrs} hr ${remMin} min` : `${hrs} hr`;
+}
+window.formatDuration = formatDuration;
+
+function formatDelayDuration(minutes) {
+    if (minutes === null || minutes === undefined || isNaN(minutes)) return '+0 min';
+    const num = Number(minutes);
+    const sign = num >= 0 ? '+' : '-';
+    const absVal = Math.abs(num);
+    if (absVal < 60) {
+        const formatted = absVal % 1 === 0 ? absVal : absVal.toFixed(1);
+        return `${sign}${formatted} min`;
+    }
+    const totalMin = Math.round(absVal);
+    const hrs = Math.floor(totalMin / 60);
+    const remMin = totalMin % 60;
+    return remMin > 0 ? `${sign}${hrs} hr ${remMin} min` : `${sign}${hrs} hr`;
+}
+window.formatDelayDuration = formatDelayDuration;
 
 // =========================================================
 // AUTHENTICATION & STARTUP SEQUENCE
@@ -1104,6 +1136,7 @@ document.addEventListener('DOMContentLoaded', () => {
     initNavigation();
     initMap();
     initFullscreenControls();
+    initDrawerResizeHandler();
     initWebSocket();
     initScenarioSelector();
     initRoutePlanner();
@@ -1416,6 +1449,260 @@ function initNavigation() {
     });
 }
 
+// =========================================================
+// INTERACTIVE RESIZABLE BOTTOM SHEET DRAG (IMAGE 1)
+// =========================================================
+function initDrawerResizeHandler() {
+    const handleZone = document.getElementById('drawer-handle-zone') || document.getElementById('drawer-handle');
+    const drawer = document.getElementById('detail-drawer');
+    if (!drawer || !handleZone) return;
+
+    let isDragging = false;
+    let startY = 0;
+    let startHeight = 0;
+    let hasMoved = false;
+
+    const minH = 90;
+    const getMaxH = () => Math.round(window.innerHeight * 0.85);
+
+    function setDrawerHeight(hPx, animate = false) {
+        const maxH = getMaxH();
+        const clamped = Math.max(minH, Math.min(maxH, Math.round(hPx)));
+
+        if (animate) {
+            drawer.classList.remove('is-dragging');
+        } else {
+            drawer.classList.add('is-dragging');
+        }
+
+        drawer.style.setProperty('--drawer-height', `${clamped}px`);
+        drawer.style.height = `${clamped}px`;
+
+        if (window.leafletMap) {
+            window.leafletMap.invalidateSize();
+        }
+        return clamped;
+    }
+
+    function startDrag(clientY) {
+        isDragging = true;
+        hasMoved = false;
+        startY = clientY;
+        startHeight = drawer.getBoundingClientRect().height;
+        drawer.classList.add('is-dragging');
+        document.body.classList.add('is-resizing-drawer');
+    }
+
+    function moveDrag(clientY) {
+        if (!isDragging) return;
+        const deltaY = startY - clientY;
+        if (Math.abs(deltaY) > 2) {
+            hasMoved = true;
+        }
+        const newHeight = startHeight + deltaY;
+        setDrawerHeight(newHeight, false);
+    }
+
+    function endDrag() {
+        if (!isDragging) return;
+        isDragging = false;
+        drawer.classList.remove('is-dragging');
+        document.body.classList.remove('is-resizing-drawer');
+
+        const curH = drawer.getBoundingClientRect().height;
+        const maxH = getMaxH();
+
+        // Snap only if dragged to extreme top or extreme bottom edge
+        if (curH < 120) {
+            setDrawerHeight(minH, true);
+        } else if (curH > maxH - 30) {
+            setDrawerHeight(maxH, true);
+        } else {
+            // Keep the exact custom height chosen by the user
+            setDrawerHeight(curH, false);
+        }
+
+        if (window.leafletMap) {
+            setTimeout(() => window.leafletMap && window.leafletMap.invalidateSize(), 50);
+            setTimeout(() => window.leafletMap && window.leafletMap.invalidateSize(), 180);
+        }
+    }
+
+    // Pointer events for mouse, pen, and touch
+    handleZone.addEventListener('pointerdown', (e) => {
+        if (e.button !== undefined && e.button !== 0) return;
+        e.stopPropagation();
+        if (e.cancelable) e.preventDefault();
+        startDrag(e.clientY);
+        try {
+            handleZone.setPointerCapture(e.pointerId);
+        } catch (err) {}
+    });
+
+    handleZone.addEventListener('pointermove', (e) => {
+        if (!isDragging) return;
+        e.stopPropagation();
+        if (e.cancelable) e.preventDefault();
+        moveDrag(e.clientY);
+    });
+
+    const onPointerRelease = (e) => {
+        if (!isDragging) return;
+        try {
+            handleZone.releasePointerCapture(e.pointerId);
+        } catch (err) {}
+        endDrag();
+    };
+    handleZone.addEventListener('pointerup', onPointerRelease);
+    handleZone.addEventListener('pointercancel', onPointerRelease);
+
+    // Window fallback listeners so drag continues even if mouse moves fast
+    window.addEventListener('pointermove', (e) => {
+        if (isDragging) {
+            moveDrag(e.clientY);
+        }
+    });
+    window.addEventListener('pointerup', () => {
+        if (isDragging) endDrag();
+    });
+
+    // Touch fallback
+    handleZone.addEventListener('touchstart', (e) => {
+        if (e.touches && e.touches[0]) {
+            e.stopPropagation();
+            if (e.cancelable) e.preventDefault();
+            startDrag(e.touches[0].clientY);
+        }
+    }, { passive: false });
+
+    window.addEventListener('touchmove', (e) => {
+        if (isDragging && e.touches && e.touches[0]) {
+            if (e.cancelable) e.preventDefault();
+            moveDrag(e.touches[0].clientY);
+        }
+    }, { passive: false });
+
+    window.addEventListener('touchend', () => {
+        if (isDragging) endDrag();
+    });
+
+    // Tap/click on handle bar toggles between peek and default view
+    handleZone.addEventListener('click', (e) => {
+        if (hasMoved) return; // ignore click if it was a drag
+        const curH = drawer.getBoundingClientRect().height;
+        if (curH < 180) {
+            setDrawerHeight(360, true);
+        } else {
+            setDrawerHeight(minH, true);
+        }
+    });
+
+    // Auto-expand drawer to mid-view when tabs are clicked while in peek mode
+    drawer.querySelectorAll('.drawer-tab').forEach(tab => {
+        tab.addEventListener('click', () => {
+            const h = drawer.getBoundingClientRect().height;
+            if (h < 180) {
+                setDrawerHeight(360, true);
+            }
+        });
+    });
+}
+
+
+// =========================================================
+// REAL-TIME VEHICLE SPEED HUD BADGE (IMAGE 1 & 2)
+// Shows ONLY when vehicle is actively running (moving or nav active)
+// =========================================================
+let gpsSpeedWatchId = null;
+
+function updateMapVehicleSpeed(speedKmh, label = 'Live Speed', isRunning = false) {
+    const valEl = document.getElementById('map-vehicle-speed-val');
+    const statusEl = document.getElementById('map-vehicle-speed-status');
+    const badgeEl = document.getElementById('map-vehicle-speed-badge');
+    const iconEl = badgeEl ? badgeEl.querySelector('.speed-gauge-icon') : null;
+
+    if (!badgeEl) return;
+
+    const numSpeed = Number(speedKmh);
+    const rounded = (!isNaN(numSpeed) && numSpeed > 0) ? Math.round(numSpeed) : 0;
+    const isNavigating = (typeof navActive !== 'undefined' && navActive === true);
+
+    // Vehicle is considered running only when:
+    // 1) isRunning flag is explicitly true with speed > 0
+    // 2) OR active Turn-by-Turn Navigation is currently underway
+    // 3) OR GPS speed is greater than 0
+    const vehicleIsRunning = Boolean((isRunning && rounded > 0) || isNavigating || rounded > 0);
+
+    if (!vehicleIsRunning) {
+        // Hide badge completely when vehicle is not actively running
+        badgeEl.style.display = 'none';
+        badgeEl.classList.remove('is-running', 'active');
+        return;
+    }
+
+    // Vehicle is running: reveal badge and display current speed
+    badgeEl.style.display = 'flex';
+    badgeEl.classList.add('is-running', 'active');
+
+    if (valEl) {
+        valEl.textContent = rounded;
+    }
+
+    if (statusEl && label) {
+        statusEl.textContent = label;
+    }
+
+    if (rounded < 25) {
+        badgeEl.style.borderColor = 'rgba(239, 68, 68, 0.6)';
+        if (iconEl) iconEl.style.color = '#ef4444';
+    } else if (rounded < 50) {
+        badgeEl.style.borderColor = 'rgba(245, 158, 11, 0.6)';
+        if (iconEl) iconEl.style.color = '#f59e0b';
+    } else {
+        badgeEl.style.borderColor = 'rgba(16, 185, 129, 0.45)';
+        if (iconEl) iconEl.style.color = '#10b981';
+    }
+}
+
+function startLiveVehicleSpeedTracking() {
+    if (typeof navigator === 'undefined' || !navigator.geolocation) return;
+    if (gpsSpeedWatchId !== null) return;
+
+    try {
+        gpsSpeedWatchId = navigator.geolocation.watchPosition(
+            (pos) => {
+                if (pos && pos.coords) {
+                    const rawSpeed = pos.coords.speed; // speed in meters/second
+                    if (rawSpeed !== null && !isNaN(rawSpeed) && rawSpeed > 0.5) {
+                        const speedKmh = Math.round(rawSpeed * 3.6);
+                        updateMapVehicleSpeed(speedKmh, 'GPS Speed', true);
+                    } else if (typeof navActive !== 'undefined' && navActive) {
+                        const navSpeed = (state.activeRoute && state.activeRoute.route_speed_kmh) || 35;
+                        updateMapVehicleSpeed(navSpeed, 'Nav Active', true);
+                    } else {
+                        // Stationary / stopped
+                        updateMapVehicleSpeed(0, 'Stopped', false);
+                    }
+                }
+            },
+            (err) => {
+                console.warn('Live Speed Geolocation notice:', err.message);
+            },
+            { enableHighAccuracy: true, maximumAge: 1000, timeout: 5000 }
+        );
+    } catch (e) {
+        console.warn('Failed to start GPS speed watcher:', e);
+    }
+}
+
+function stopLiveVehicleSpeedTracking() {
+    if (gpsSpeedWatchId !== null && typeof navigator !== 'undefined' && navigator.geolocation) {
+        navigator.geolocation.clearWatch(gpsSpeedWatchId);
+        gpsSpeedWatchId = null;
+    }
+    updateMapVehicleSpeed(0, '', false);
+}
+
 function switchAdminSubtab(subtabName) {
     if (!subtabName) subtabName = 'overview';
 
@@ -1604,7 +1891,7 @@ function initMap() {
     leafletMap = L.map('traffic-map', {
         center: [defaultLat, defaultLon],
         zoom: 13,
-        zoomControl: true,
+        zoomControl: false,
         attributionControl: false
     });
 
@@ -1619,6 +1906,11 @@ function initMap() {
 
     // Dedicated layer group for routes to guarantee zero duplicate/stale polylines
     routeLayersGroup = L.layerGroup().addTo(leafletMap);
+
+    // Listen for manual user interactions so background auto-refresh does not override user's manual zoom / pan
+    leafletMap.on('zoomstart dragstart movestart', () => {
+        state.userHasInteractedWithMap = true;
+    });
 
     // Map Click & Move Listener for Interactive Route Origin / Destination Picking
     leafletMap.on('moveend', () => {
@@ -1635,9 +1927,21 @@ function initMap() {
         }
     });
 
+    // Automatically invalidate map size whenever map container or window resizes
+    const mapWrapperEl = document.getElementById('map-wrapper') || document.getElementById('traffic-map');
+    if (mapWrapperEl && window.ResizeObserver) {
+        const resizeObserver = new ResizeObserver(() => {
+            if (leafletMap) leafletMap.invalidateSize({ pan: false });
+        });
+        resizeObserver.observe(mapWrapperEl);
+    }
+    window.addEventListener('resize', () => {
+        if (leafletMap) leafletMap.invalidateSize({ pan: false });
+    });
+
     // Invalidate size once DOM stabilizes
     setTimeout(() => {
-        if (leafletMap) leafletMap.invalidateSize();
+        if (leafletMap) leafletMap.invalidateSize({ pan: false });
     }, 250);
 }
 
@@ -1753,6 +2057,13 @@ function initFullscreenControls() {
     const fullscreenBtn = document.getElementById('btn-map-fullscreen');
     const exitFullscreenBtn = document.getElementById('btn-exit-map-fullscreen');
     const recenterBtn = document.getElementById('btn-map-recenter');
+
+    // Custom Zoom In / Zoom Out buttons
+    const zoomInBtn = document.getElementById('btn-map-zoom-in');
+    const zoomOutBtn = document.getElementById('btn-map-zoom-out');
+    if (zoomInBtn) zoomInBtn.addEventListener('click', () => leafletMap && leafletMap.zoomIn());
+    if (zoomOutBtn) zoomOutBtn.addEventListener('click', () => leafletMap && leafletMap.zoomOut());
+
 
     if (fullscreenBtn) {
         fullscreenBtn.addEventListener('click', toggleMapFullscreen);
@@ -1921,10 +2232,16 @@ function requestBrowserLocation(silent = false) {
                 setOriginCoordinates(lat, lon, locationName);
             }
 
-            if (leafletMap) {
+            if (leafletMap && (!silent || !state.userHasInteractedWithMap)) {
                 leafletMap.setView([lat, lon], 15);
-                leafletMap.invalidateSize();
+                leafletMap.invalidateSize({ pan: false });
             }
+
+            if (pos.coords && pos.coords.speed !== null && !isNaN(pos.coords.speed) && pos.coords.speed > 0.5) {
+                const speedKmh = Math.round(pos.coords.speed * 3.6);
+                updateMapVehicleSpeed(speedKmh, 'GPS Live', true);
+            }
+            startLiveVehicleSpeedTracking();
 
             const accStr = accuracy ? ` (GPS accuracy: ±${accuracy} m)` : '';
             if (!silent) showToast(`Location received: ${locationName}${accStr}`, 'success');
@@ -2411,8 +2728,8 @@ async function calculateSmartRoutes() {
             state.routes = calculatedRoutes;
             renderRouteComparisonCards(state.routes);
             
-            // Select recommended / first route
-            selectRoute(state.routes[0].id);
+            // Select recommended / first route (autoFit = true for initial route view)
+            selectRoute(state.routes[0].id, true);
 
             // SUCCESS UX: Automatically close Route Planner modal/card
             const floatingCard = document.getElementById('floating-route-card');
@@ -2635,7 +2952,7 @@ async function fetchLiveOSRMDirectRoutes(orig, dst) {
 // ---------------------------------------------------------
 // SELECT ROUTE & DRAW TRAFFIC-COLORED SEGMENTS
 // ---------------------------------------------------------
-function selectRoute(routeId) {
+function selectRoute(routeId, autoFit = false) {
     state.activeRouteId = routeId;
     const chosenRoute = state.routes.find(r => r.id === routeId);
     if (!chosenRoute) return;
@@ -2645,8 +2962,8 @@ function selectRoute(routeId) {
         c.classList.toggle('active', c.dataset.routeId === routeId);
     });
 
-    // Draw route & traffic segments
-    renderTrafficColoredRouteSegments(chosenRoute, state.routes);
+    // Draw route & traffic segments (only auto-fits bounds if explicitly requested)
+    renderTrafficColoredRouteSegments(chosenRoute, state.routes, autoFit);
 
     // Update KPI Bar strictly for currently selected route
     const routeSpeed = chosenRoute.route_speed_kmh || (chosenRoute.traffic_segments && chosenRoute.traffic_segments.length > 0
@@ -2657,6 +2974,11 @@ function selectRoute(routeId) {
     document.getElementById('kpi-speed-trend').textContent = chosenRoute.congestion_level ? `${chosenRoute.congestion_level} FLOW` : 'Observed Flow';
     document.getElementById('kpi-congestion-val').innerHTML = `${chosenRoute.congestion_score} <small>/ 100</small>`;
     document.getElementById('kpi-congestion-trend').textContent = chosenRoute.congestion_level ? `${chosenRoute.congestion_level} TRAFFIC` : 'Live Traffic State';
+
+    // Only update real-time vehicle speed HUD badge if navigation is actively running
+    if (typeof navActive !== 'undefined' && navActive) {
+        updateMapVehicleSpeed(routeSpeed, chosenRoute.tag || 'Active Route', true);
+    }
     
     const congestedCount = chosenRoute.heavy_severe_segments !== undefined 
         ? chosenRoute.heavy_severe_segments 
@@ -2686,7 +3008,7 @@ function selectRoute(routeId) {
     }
 }
 
-function renderTrafficColoredRouteSegments(selectedRoute, allRoutes) {
+function renderTrafficColoredRouteSegments(selectedRoute, allRoutes, autoFit = false) {
     if (!leafletMap || !routeLayersGroup) return;
 
     // Clean up all previous route layers completely (no duplicate or stale polylines!)
@@ -2704,8 +3026,8 @@ function renderTrafficColoredRouteSegments(selectedRoute, allRoutes) {
                 lineJoin: 'round'
             }).addTo(routeLayersGroup);
 
-            altPoly.on('click', () => selectRoute(altRoute.id));
-            altPoly.bindTooltip(`<b>${altRoute.tag}</b><br>${altRoute.distance_km} km · ${altRoute.current_eta_minutes} min`, { sticky: true });
+            altPoly.on('click', () => selectRoute(altRoute.id, false));
+            altPoly.bindTooltip(`<b>${altRoute.tag}</b><br>${altRoute.distance_km} km · ${formatDuration(altRoute.current_eta_minutes)}`, { sticky: true });
         }
     });
 
@@ -2769,9 +3091,9 @@ function renderTrafficColoredRouteSegments(selectedRoute, allRoutes) {
         selectedRoute.geometry.forEach(c => allCoords.push(c));
     }
 
-    // Auto-fit map to the complete route geometry bounds with padding!
-    if (allCoords.length > 0) {
-        leafletMap.fitBounds(L.latLngBounds(allCoords), { padding: [40, 40] });
+    // Auto-fit map to the complete route geometry bounds ONLY when explicitly requested (e.g. initial plan calculation)
+    if (autoFit && allCoords.length > 0) {
+        leafletMap.fitBounds(L.latLngBounds(allCoords), { padding: [40, 40], maxZoom: 16 });
     }
 }
 
@@ -2796,9 +3118,9 @@ function renderRouteComparisonCards(routes) {
                 <span style="font-size:11px;color:var(--text-dim);">${r.distance_km} km</span>
             </div>
             <div class="route-sum-stats">
-                <div>ETA: <strong>${r.current_eta_minutes} min</strong></div>
-                <div>Normal: <strong>${normalEta} min</strong></div>
-                <div>Delay: <strong style="color:${r.delay_minutes > 0 ? '#ef4444' : '#10b981'};">+${r.delay_minutes} min</strong></div>
+                <div>ETA: <strong>${formatDuration(r.current_eta_minutes)}</strong></div>
+                <div>Normal: <strong>${formatDuration(normalEta)}</strong></div>
+                <div>Delay: <strong style="color:${r.delay_minutes > 0 ? '#ef4444' : '#10b981'};">${formatDelayDuration(r.delay_minutes)}</strong></div>
             </div>
             <div style="font-size:11px;color:var(--text-dim);">
                 Speed: <b>${r.route_speed_kmh ? r.route_speed_kmh + ' km/h' : 'Observed Flow'}</b> · Congestion: <b style="color:${getCongestionColor(r.congestion_score)};">${r.congestion_level || 'MODERATE'} (${r.congestion_score}/100)</b>
@@ -2806,7 +3128,7 @@ function renderRouteComparisonCards(routes) {
             ${r.why_recommended || (isRec && r.recommendation_reason) ? `<div class="why-rec-box">${r.why_recommended || r.recommendation_reason}</div>` : ''}
         `;
 
-        card.addEventListener('click', () => selectRoute(r.id));
+        card.addEventListener('click', () => selectRoute(r.id, false));
 
         if (drawerFeed) drawerFeed.appendChild(card.cloneNode(true));
         if (fullFeed) fullFeed.appendChild(card);
@@ -2814,7 +3136,7 @@ function renderRouteComparisonCards(routes) {
 
     if (drawerFeed) {
         drawerFeed.querySelectorAll('.route-summary-card').forEach(c => {
-            c.addEventListener('click', () => selectRoute(c.dataset.routeId));
+            c.addEventListener('click', () => selectRoute(c.dataset.routeId, false));
         });
     }
 }
@@ -2905,6 +3227,10 @@ function updateRoadDetailDrawer(data) {
     document.getElementById('detail-freeflow-speed').innerHTML = `${data.free_flow_speed_kmh} <small>km/h</small>`;
     document.getElementById('detail-vehicle-count').textContent = data.vehicle_count || 'N/A';
     document.getElementById('detail-est-delay').textContent = data.est_delay_min;
+
+    if (data.current_speed_kmh !== undefined && typeof navActive !== 'undefined' && navActive) {
+        updateMapVehicleSpeed(data.current_speed_kmh, data.road_name || 'Segment Speed', true);
+    }
 
     if (data.predictions && data.predictions.length >= 3) {
         document.getElementById('pred-15m-badge').textContent = data.predictions[0].level;
@@ -3698,8 +4024,9 @@ function handleLiveTrafficTick(data) {
         if (congTrend) congTrend.textContent = 'No route selected';
         if (roadsVal) roadsVal.textContent = 'N/A';
         if (roadsTrend) roadsTrend.textContent = 'No route selected';
+        // Speed badge remains hidden by default until vehicle is actively running
     } else if (state.activeRouteId) {
-        selectRoute(state.activeRouteId);
+        selectRoute(state.activeRouteId, false);
     }
 
     if (state.selectedSegmentId) {
@@ -3781,7 +4108,9 @@ async function refreshAllLiveData(silent = false) {
     ]);
 
     if (state.routes.length > 0 && state.originCoord && state.destCoord) {
-        calculateSmartRoutes();
+        if (state.activeRouteId) {
+            selectRoute(state.activeRouteId, false);
+        }
     }
 
     lastUpdateTime = Date.now();
@@ -3845,8 +4174,14 @@ function initIncidentAndNotificationModals() {
                 return;
             }
 
+            const submitBtn = document.getElementById('btn-submit-incident');
+            if (submitBtn) {
+                submitBtn.disabled = true;
+                submitBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Dispatching...';
+            }
+
             try {
-                await fetch(`${API_BASE}/api/v1/incidents`, {
+                const res = await fetch(`${API_BASE}/api/v1/incidents`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
@@ -3860,12 +4195,21 @@ function initIncidentAndNotificationModals() {
                         source: 'Operator Dispatch'
                     })
                 });
-                closeIncidentModal();
-                fetchLiveState();
-                showToast('Incident dispatched successfully', 'success');
+                if (res.ok) {
+                    closeIncidentModal();
+                    fetchLiveState();
+                    showToast('Incident dispatched successfully', 'success');
+                } else {
+                    const errData = await res.json().catch(() => ({}));
+                    showToast(errData.detail || 'Failed to dispatch incident. Please check details and retry.', 'error');
+                }
             } catch (err) {
-                showToast('Incident saved locally', 'info');
-                closeIncidentModal();
+                showToast('Network connection failed. Unable to dispatch incident.', 'error');
+            } finally {
+                if (submitBtn) {
+                    submitBtn.disabled = false;
+                    submitBtn.innerHTML = 'Dispatch Incident';
+                }
             }
         });
     }
@@ -6832,9 +7176,11 @@ function startTurnByTurnNavigation(route) {
     const hud = document.getElementById('navigation-hud-overlay');
     if (hud) hud.style.display = 'flex';
 
-    document.getElementById('nav-eta-val').textContent = `${route.current_eta_minutes} min`;
+    document.getElementById('nav-eta-val').textContent = formatDuration(route.current_eta_minutes);
     document.getElementById('nav-dist-val').textContent = `${route.distance_km} km`;
     document.getElementById('nav-speed-val').textContent = `${route.route_speed_kmh || 45} km/h`;
+    startLiveVehicleSpeedTracking();
+    updateMapVehicleSpeed(route.route_speed_kmh || 45, 'Nav Active', true);
 
     showToast('Navigation started! Following optimal corridor...', 'success');
 
@@ -6859,6 +7205,8 @@ function startTurnByTurnNavigation(route) {
 function endTurnByTurnNavigation() {
     navActive = false;
     if (navStepInterval) clearInterval(navStepInterval);
+    stopLiveVehicleSpeedTracking();
+    updateMapVehicleSpeed(0, '', false);
     const hud = document.getElementById('navigation-hud-overlay');
     if (hud) hud.style.display = 'none';
     showToast('Navigation ended.', 'info');

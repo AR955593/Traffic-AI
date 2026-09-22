@@ -4,12 +4,13 @@ import json
 import uuid
 import asyncio
 import requests
+import sqlite3
 from datetime import datetime, timezone
 from typing import Optional, Dict, Any, List
 from fastapi import FastAPI, HTTPException, Header, WebSocket, WebSocketDisconnect, Query, Response, Depends, Request, Body
 from fastapi.staticfiles import StaticFiles
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import PlainTextResponse, HTMLResponse
+from fastapi.responses import PlainTextResponse, HTMLResponse, JSONResponse
 from pydantic import BaseModel, Field
 from dotenv import load_dotenv
 
@@ -28,7 +29,7 @@ from providers import ProviderManager
 from auth import AuthManager, decode_access_token
 from predictor import TrafficPredictor
 from analytics import AnalyticsEngine
-from api_connectors import TomTomSearchConnector, TomTomRoutingConnector, OpenWeatherConnector
+from api_connectors import TomTomSearchConnector, TomTomRoutingConnector, OpenWeatherConnector, OSRMRoutingConnector
 from user_service import UserService
 from ai_assistant import AITrafficAssistant
 from help_center import help_center_manager
@@ -66,6 +67,32 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+# -------------------------------------------------------------
+# GLOBAL DATABASE FAULT TOLERANCE EXCEPTION HANDLERS
+# -------------------------------------------------------------
+@app.exception_handler(ServerSelectionTimeoutError)
+@app.exception_handler(PyMongoError)
+async def mongo_exception_handler(request: Request, exc: Exception):
+    return JSONResponse(
+        status_code=503,
+        content={
+            "status": "error",
+            "code": "DATABASE_UNAVAILABLE",
+            "detail": "Database service temporarily unavailable. Please retry shortly."
+        }
+    )
+
+@app.exception_handler(sqlite3.OperationalError)
+async def sqlite_exception_handler(request: Request, exc: sqlite3.OperationalError):
+    return JSONResponse(
+        status_code=503,
+        content={
+            "status": "error",
+            "code": "DATABASE_LOCK_OR_UNAVAILABLE",
+            "detail": "Operational database temporarily busy or unavailable. Please retry shortly."
+        }
+    )
 
 incident_manager = IncidentManager()
 simulator = TrafficSimulator(incident_manager=incident_manager)
@@ -462,7 +489,10 @@ def require_authenticated_user(request: Request, authorization: Optional[str] = 
     payload = decode_access_token(token)
     if not payload or "sub" not in payload:
         raise HTTPException(status_code=401, detail="Invalid or expired authentication token.")
-    user = auth_manager.get_user_by_id(payload["sub"])
+    try:
+        user = auth_manager.get_user_by_id(payload["sub"])
+    except (ServerSelectionTimeoutError, PyMongoError):
+        raise HTTPException(status_code=503, detail="Authentication service temporarily unavailable.")
     if not user:
         user = {
             "id": payload.get("sub"),
@@ -2426,8 +2456,9 @@ def chat_ai_assistant(req: AssistantQueryRequest):
     q = req.query or req.message
     if not q or not q.strip():
         raise HTTPException(status_code=400, detail="Query or message is required.")
-    weather_data = weather_connector.get_weather()
-    incidents_list = tomtom_routing_connector.get_incidents(51.5074, -0.1278)
+    kanpur_lat, kanpur_lon = 26.4499, 80.3319
+    weather_data = weather_connector.get_weather(lat=kanpur_lat, lon=kanpur_lon)
+    incidents_list = tomtom_routing_connector.get_incidents(kanpur_lat, kanpur_lon)
     has_live_key = bool(os.getenv("TOMTOM_API_KEY") and os.getenv("TOMTOM_API_KEY") != "YOUR_TOMTOM_API_KEY")
     live_state = {
         "mode": "LIVE" if has_live_key else "UNAVAILABLE",
@@ -2732,7 +2763,7 @@ async def traffic_websocket(websocket: WebSocket, token: Optional[str] = Query(d
     await ws_manager.connect(websocket, user_id=user_id, role=role)
     try:
         while True:
-            statuses = provider_manager.get_all_status()
+            statuses = await asyncio.to_thread(provider_manager.get_all_status)
             tomtom_status = next((s for s in statuses if "TomTom" in s["name"]), {})
             
             payload = {

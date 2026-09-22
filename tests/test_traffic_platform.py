@@ -115,10 +115,10 @@ def test_smart_router_with_traffic_segments():
     )
     if live_plan["success"]:
         assert live_plan["mode"] == "LIVE"
-        assert live_plan["provider"] == "TomTom NV"
+        assert live_plan["provider"] in ["TomTom NV", "Smart Routing (OSRM)"]
     else:
         assert live_plan["mode"] == "UNAVAILABLE"
-        assert live_plan["provider"] == "TomTom NV"
+        assert live_plan["provider"] in ["TomTom NV", "TomTom / OSRM"]
 
 def test_traffic_predictor_and_factors():
     predictor = TrafficPredictor()

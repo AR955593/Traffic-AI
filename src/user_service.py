@@ -31,6 +31,18 @@ class UserService:
         return list(cursor)
 
     def add_saved_place(self, user_id: str, label: str, custom_name: str, address: str, lat: float, lon: float) -> Dict[str, Any]:
+        # Idempotency check: prevent duplicate places on network retry or double-tap
+        existing = self.db.saved_places.find_one({
+            "user_id": user_id,
+            "$or": [
+                {"label": label, "label": {"$in": ["Home", "Office", "College"]}},
+                {"custom_name": custom_name, "lat": round(float(lat), 5), "lon": round(float(lon), 5)},
+                {"address": address, "label": label}
+            ]
+        }, {"_id": 0})
+        if existing:
+            return existing
+
         place_id = f"plc_{uuid.uuid4().hex[:8]}"
         now_str = datetime.now(timezone.utc).isoformat()
         doc = {
@@ -39,8 +51,8 @@ class UserService:
             "label": label,
             "custom_name": custom_name,
             "address": address,
-            "lat": float(lat),
-            "lon": float(lon),
+            "lat": round(float(lat), 5),
+            "lon": round(float(lon), 5),
             "created_at": now_str
         }
         self.db.saved_places.insert_one(doc.copy())
@@ -50,8 +62,8 @@ class UserService:
             "label": label,
             "custom_name": custom_name,
             "address": address,
-            "lat": float(lat),
-            "lon": float(lon),
+            "lat": round(float(lat), 5),
+            "lon": round(float(lon), 5),
             "created_at": now_str
         }
 
@@ -70,6 +82,17 @@ class UserService:
         return list(cursor)
 
     def add_saved_route(self, user_id: str, title: str, origin_name: str, origin_lat: float, origin_lon: float, dest_name: str, dest_lat: float, dest_lon: float, preference: str = "balanced") -> Dict[str, Any]:
+        # Idempotency check: prevent duplicate routes on network retry or double-tap
+        existing = self.db.saved_routes.find_one({
+            "user_id": user_id,
+            "origin_name": origin_name,
+            "dest_name": dest_name,
+            "origin_lat": round(float(origin_lat), 5),
+            "dest_lat": round(float(dest_lat), 5)
+        }, {"_id": 0})
+        if existing:
+            return existing
+
         route_id = f"srt_{uuid.uuid4().hex[:8]}"
         now_str = datetime.now(timezone.utc).isoformat()
         doc = {
@@ -77,11 +100,11 @@ class UserService:
             "user_id": user_id,
             "title": title,
             "origin_name": origin_name,
-            "origin_lat": float(origin_lat),
-            "origin_lon": float(origin_lon),
+            "origin_lat": round(float(origin_lat), 5),
+            "origin_lon": round(float(origin_lon), 5),
             "dest_name": dest_name,
-            "dest_lat": float(dest_lat),
-            "dest_lon": float(dest_lon),
+            "dest_lat": round(float(dest_lat), 5),
+            "dest_lon": round(float(dest_lon), 5),
             "preference": preference,
             "created_at": now_str
         }
@@ -91,11 +114,11 @@ class UserService:
             "user_id": user_id,
             "title": title,
             "origin_name": origin_name,
-            "origin_lat": float(origin_lat),
-            "origin_lon": float(origin_lon),
+            "origin_lat": round(float(origin_lat), 5),
+            "origin_lon": round(float(origin_lon), 5),
             "dest_name": dest_name,
-            "dest_lat": float(dest_lat),
-            "dest_lon": float(dest_lon),
+            "dest_lat": round(float(dest_lat), 5),
+            "dest_lon": round(float(dest_lon), 5),
             "preference": preference,
             "created_at": now_str
         }
