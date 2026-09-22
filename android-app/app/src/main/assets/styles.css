@@ -2672,7 +2672,7 @@ table, .admin-table, .custom-table, .data-table {
         padding-bottom: 6px;
         padding-left: max(6px, env(safe-area-inset-left, 0px));
         padding-right: max(6px, env(safe-area-inset-right, 0px));
-        gap: 4px;
+        gap: 3px;
         display: flex;
         align-items: center;
         justify-content: space-between;
@@ -2680,15 +2680,25 @@ table, .admin-table, .custom-table, .data-table {
         width: 100%;
         box-sizing: border-box;
         position: relative;
+        overflow-x: auto;
+        overflow-y: hidden;
+        scrollbar-width: none;
+        -ms-overflow-style: none;
+        -webkit-overflow-scrolling: touch;
+    }
+
+    .top-header::-webkit-scrollbar {
+        display: none;
     }
 
     .header-left {
         display: flex;
         align-items: center;
-        gap: 4px;
+        gap: 3px;
         flex-shrink: 0;
         min-width: 0;
     }
+
 
     .header-left .btn-mobile-menu {
         width: 30px;
