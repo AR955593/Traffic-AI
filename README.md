@@ -53,10 +53,10 @@ https://trafficai-taupe.vercel.app/
 </p>
 <h2>📱 <span style="font-weight:bold;">ScreenShot For Web Application</span></h2>
 <p align="center">
-<img src="https://github.com/AR955593/Pharmaguard_AI/blob/main/Screenshot%202026-02-20%20015121.png" width="200" />
-  <img src="https://github.com/AR955593/Pharmaguard_AI/blob/main/Screenshot%202026-02-20%20015110.png" width="200" />
-  <img src = "https://github.com/AR955593/Pharmaguard_AI/blob/main/Screenshot%202026-02-20%20015034.png" width = "200" />
-  <img src = "https://github.com/AR955593/Pharmaguard_AI/blob/main/Screenshot%202026-02-19%20180736.png" width = "200" />
+<img src="https://github.com/AR955593/Traffic-AI/blob/main/Screenshot%202026-10-08%20194706.png" width="200" />
+  <img src="https://github.com/AR955593/Traffic-AI/blob/main/Screenshot%202026-10-08%20200234.png" width="200" />
+  <img src = "https://github.com/AR955593/Traffic-AI/blob/main/Screenshot%202026-10-08%20200408.png" width = "200" />
+  <img src = "https://github.com/AR955593/Traffic-AI/blob/main/Screenshot%202026-10-08%200200447.png" width = "200" />
 </p>
 
 ### Desktop Control Room
@@ -66,11 +66,15 @@ https://trafficai-taupe.vercel.app/
 - 
 ## 📱 ScreenShot For Android Application
 <p align="center">
-  <img src="https://github.com/AR955593/Pharmaguard_AI/blob/main/Screenshot_20260219-180309.PharmaGuard.png"  width="200"/>
-  <img src="https://github.com/AR955593/Pharmaguard_AI/blob/main/Screenshot_20260219-180315.PharmaGuard.png" width="200" />
-  <img src="https://github.com/AR955593/Pharmaguard_AI/blob/main/Screenshot_20260219-180251.PharmaGuard.png" width="200" />
-  <img src="https://github.com/AR955593/Pharmaguard_AI/blob/main/Screenshot_20260219-180323.PharmaGuard.png" width="200" />
-
+  <img src="https://github.com/AR955593/Traffic-AI/blob/main/Screenshot_20261008-194100_TrafficAI.png"  width="200"/>
+  <img src="https://github.com/AR955593/Traffic-AI/blob/main/Screenshot_20261008-194101_TrafficAI.png" width="200" />
+  <img src="https://github.com/AR955593/Traffic-AI/blob/main/Screenshot_20261008-194105_TrafficAI.png" width="200" />
+  <img src="https://github.com/AR955593/Traffic-AI/blob/main/Screenshot_20261008-194110_TrafficAI.png" width="200" />
+  <img src="https://github.com/AR955593/Traffic-AI/blob/main/Screenshot_20261008-194117_TrafficAI.png"  width="200"/>
+  <img src="https://github.com/AR955593/Traffic-AI/blob/main/Screenshot_20261008-194202_TrafficAI.png" width="200" />
+  <img src="https://github.com/AR955593/Traffic-AI/blob/main/Screenshot_20261008-194209_TrafficAI.png" width="200" />
+  <img src="https://github.com/AR955593/Traffic-AI/blob/main/Screenshot_20261008-194228_TrafficAI.png" width="200" />
+  <img src="https://github.com/AR955593/Traffic-AI/blob/main/Screenshot_20261008-194249_TrafficAI.png" width="200" />
 ### Mobile Phone App
 - **Touch-First Responsive UI**: Fullscreen interactive map with pinch-to-zoom and pan.
 - **Swipeable Bottom Sheet**: Expandable road details, turn-by-turn navigation, and incident feeds.
