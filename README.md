@@ -30,6 +30,7 @@ Experience AI-powered real-time traffic intelligence directly on your Android ph
 
 **APK:** `Traffic_AI.apk`
 
+
 > Download the APK, install it on your Android phone, and start using TrafficAI.
 
 ### 📲 Installation
@@ -49,11 +50,26 @@ Experience AI-powered real-time traffic intelligence directly on your Android ph
 https://trafficai-taupe.vercel.app/
 
 ## 📸 Platform Interface
+</p>
+<h2>📱 <span style="font-weight:bold;">ScreenShot For Web Application</span></h2>
+<p align="center">
+<img src="https://github.com/AR955593/Pharmaguard_AI/blob/main/Screenshot%202026-02-20%20015121.png" width="200" />
+  <img src="https://github.com/AR955593/Pharmaguard_AI/blob/main/Screenshot%202026-02-20%20015110.png" width="200" />
+  <img src = "https://github.com/AR955593/Pharmaguard_AI/blob/main/Screenshot%202026-02-20%20015034.png" width = "200" />
+  <img src = "https://github.com/AR955593/Pharmaguard_AI/blob/main/Screenshot%202026-02-19%20180736.png" width = "200" />
+</p>
 
 ### Desktop Control Room
 - **Control Center Layout**: Left dark sidebar with 8 dedicated views, top navigation header with live metrics and weather badge, 6-metric KPI bar with trends.
 - **Interactive Spatial Map**: Kanpur UP metropolitan network with 32 road corridors, real-time vehicle movement (60fps), and traffic congestion overlays.
 - **Explainable AI Drawer**: Multi-horizon predictions (+15m, +30m, +60m) with computed factor attribution (e.g. *Evening peak +18, Vehicle density +15, Incident ahead +25, Light rain +4*).
+- 
+## 📱 ScreenShot For Android Application
+<p align="center">
+  <img src="https://github.com/AR955593/Pharmaguard_AI/blob/main/Screenshot_20260219-180309.PharmaGuard.png"  width="200"/>
+  <img src="https://github.com/AR955593/Pharmaguard_AI/blob/main/Screenshot_20260219-180315.PharmaGuard.png" width="200" />
+  <img src="https://github.com/AR955593/Pharmaguard_AI/blob/main/Screenshot_20260219-180251.PharmaGuard.png" width="200" />
+  <img src="https://github.com/AR955593/Pharmaguard_AI/blob/main/Screenshot_20260219-180323.PharmaGuard.png" width="200" />
 
 ### Mobile Phone App
 - **Touch-First Responsive UI**: Fullscreen interactive map with pinch-to-zoom and pan.
