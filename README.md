@@ -56,7 +56,7 @@ https://trafficai-taupe.vercel.app/
 <img src="https://github.com/AR955593/Traffic-AI/blob/main/Screenshot%202026-10-08%20194706.png" width="200" />
   <img src="https://github.com/AR955593/Traffic-AI/blob/main/Screenshot%202026-10-08%20200234.png" width="200" />
   <img src = "https://github.com/AR955593/Traffic-AI/blob/main/Screenshot%202026-10-08%20200408.png" width = "200" />
-  <img src = "https://github.com/AR955593/Traffic-AI/blob/main/Screenshot%202026-10-08%200200447.png" width = "200" />
+  <img src = "https://github.com/AR955593/Traffic-AI/blob/main/Screenshot%202026-10-08%20200447.png" width = "200" />
 </p>
 
 ### Desktop Control Room
@@ -66,7 +66,6 @@ https://trafficai-taupe.vercel.app/
 - 
 ## 📱 ScreenShot For Android Application
 <p align="center">
-  <img src="https://github.com/AR955593/Traffic-AI/blob/main/Screenshot_20261008-194100_TrafficAI.png"  width="200"/>
   <img src="https://github.com/AR955593/Traffic-AI/blob/main/Screenshot_20261008-194101_TrafficAI.png" width="200" />
   <img src="https://github.com/AR955593/Traffic-AI/blob/main/Screenshot_20261008-194105_TrafficAI.png" width="200" />
   <img src="https://github.com/AR955593/Traffic-AI/blob/main/Screenshot_20261008-194110_TrafficAI.png" width="200" />
